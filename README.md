@@ -20,6 +20,9 @@ cd infra && docker compose up -d                  # PostgreSQL 17 + Mailpit(http
 ```
 실행 방법은 각 저장소의 README, 협업 절차는 [`docs/workflow-git.md`](docs/workflow-git.md).
 
+- PC에 PostgreSQL이 이미 설치돼 5432를 쓰고 있으면 `infra/.env`의 `DB_PORT`를 5433 등으로 바꾼다.
+- **W1 ERD 확정 전까지 V1 스키마가 바뀔 수 있다.** 백엔드 기동 시 `Migration checksum mismatch` 오류가 나면 [로컬 DB 초기화 절차](docs/workflow-git.md#v1-동결-전-예외와-로컬-db-초기화)를 따른다.
+
 ## 문서
 | 문서 | 용도 |
 |---|---|

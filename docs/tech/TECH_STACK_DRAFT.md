@@ -69,7 +69,7 @@ src/main/resources/
 ├─ mapper/{domain}/*.xml
 └─ db/migration/
    ├─ V1__init.sql
-   └─ local/V2__seed_local.sql  (local 프로필에서만 locations에 포함)
+   └─ local/R__seed_local.sql   (local 프로필에서만 locations에 포함, 반복 실행 마이그레이션)
 ```
 
 ```yaml
