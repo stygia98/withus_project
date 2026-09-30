@@ -248,7 +248,7 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 
 | 항목 | 내용 | 권장 | 기한 |
 |---|---|---|---|
-| MyBatis·springdoc의 Spring Boot 4 호환 | MyBatis 4.0.1은 Boot 4.0.x까지 지원(Initializr 기준) → Boot 4.0.8 사용. 컴파일 확인, **DB 기동 후 Swagger 동작 확인 필요** | 4.1 지원 MyBatis 출시 시 상향 | W1 1일차 |
+| MyBatis·springdoc의 Spring Boot 4 호환 | MyBatis 4.0.1은 Boot 4.0.x까지 지원(Initializr 기준) → Boot 4.0.8 사용. 기동·Flyway V1 적용·Swagger UI 동작 확인 완료 (2026-09-30) | 4.1 지원 MyBatis 출시 시 상향 | 완료 |
 | Lombok 사용 여부 | 보일러플레이트 감소 vs 명시성 | 사용 (허용 어노테이션 제한) | W1 1일차 |
 | 폼 라이브러리 | react-hook-form + zod 추가 | 추가 | W1 1일차 |
 | TinyMCE 라이선스 | 자체 설치 시 라이선스 조건 확인 | 조건이 맞지 않으면 Tiptap으로 대체 검토 | W1 |

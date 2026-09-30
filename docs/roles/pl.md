@@ -6,13 +6,15 @@
 
 ## Phase 0 — 시작 기반 (W1 첫 2일)
 - [x] 로컬 저장소 3개 `git init` (main)
-- [ ] 최초 커밋 → GitHub 원격 3개 생성·push, `dev` 브랜치, 브랜치 보호(직접 push 금지·PR 필수), 팀원 초대
+- [x] 최초 커밋, `dev` 브랜치, 원격 연결(stygia98/withus_project·withus_backend·withus_frontend)
+- [ ] push, GitHub 기본 브랜치 `dev` 지정, 브랜치 보호(직접 push 금지·PR 필수), 팀원 초대
 - [x] 메인 저장소: `CLAUDE.md`, `docs/`, `.github/`, `.gitignore`, `infra/docker-compose.yml`(PostgreSQL 17, Mailpit), `infra/.env.example`
 - [x] backend 골격(Spring Boot 4.0.8, SpringDoc, 설정·타임존·스케줄러 풀) — 컴파일 확인
-- [x] frontend 골격(Next.js 15, shadcn/ui, TanStack Query, sonner, rewrites, `lib/api.ts`, `lib/query-keys.ts`) — lint·build 확인
-- [x] `V1__init.sql` 초안(18개 테이블, 부분 유니크 인덱스) — **Docker 기동 후 적용 확인 필요, 전원 ERD 검토 후 확정**
-- [x] PRD 10.1 인터페이스 시그니처 초안: `SegmentService`, `ConsentService`, `TrackingLinkService`, `CouponService`, `TrackEventRepository` — **전원 합의 필요**
-- [ ] `docs/api/` 도메인별 API 목록 초안 (W1 전원 작업)
+- [x] frontend 골격(Next.js 15, shadcn/ui, TanStack Query, sonner, rewrites, `lib/api-client.ts`, `lib/query-keys.ts`) — lint·build 확인
+- [x] `V1__init.sql` 초안(18개 테이블, 부분 유니크 인덱스) — 로컬 적용 확인(18개 테이블, 타임존 Asia/Seoul). **전원 ERD 검토 후 확정**
+- [x] PRD 10.1 인터페이스 시그니처 초안: `SegmentService`, `ConsentService`, `TrackingLinkService`, `CouponService`, `TrackEventRepository`, `PlaceholderRenderer` — **전원 합의 필요**
+- [x] `docs/api/API_SPEC.md`, `docs/db/DB_SCHEMA.md`, `docs/tech/TECH_STACK_DRAFT.md` 초안 — **W1 전원 검토**
+- [x] Docker 로컬 기동, Flyway V1 적용, Swagger UI, `./mvnw test` 확인
 
 ## W1
 - [ ] 공통 응답 포맷·전역 예외·오류 코드·SpringDoc

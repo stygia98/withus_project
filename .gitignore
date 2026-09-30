@@ -11,6 +11,3 @@ shrimp_data/
 # 비밀값
 .env
 *.env.local
-
-# 저장소 밖에서 공유하는 파일
-withus_mockup.pdf
