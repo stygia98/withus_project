@@ -17,10 +17,11 @@
 - [x] Docker 로컬 기동, Flyway V1 적용, Swagger UI, `./mvnw test` 확인
 
 ## W1
-- [ ] 공통 응답 포맷·전역 예외·오류 코드·SpringDoc
-- [ ] 로그인/로그아웃/재발급(httpOnly 쿠키), CSRF(`GET /api/v1/auth/csrf`), 5회 실패 잠금
-- [ ] 최초 OWNER 계정, 스케줄러 풀(`spring.task.scheduling.pool.size=5`)
-- [ ] Next.js 골격: 레이아웃·GNB, rewrites, 공통 fetch 래퍼, `lib/query-keys.ts`
+- [x] 공통 응답 포맷·전역 예외·오류 코드·SpringDoc
+- [x] 로그인/로그아웃/재발급(httpOnly 쿠키), CSRF(`GET /api/v1/auth/csrf`), 5회 실패 잠금 — 테스트 6건
+- [x] 최초 OWNER 계정, 스케줄러 풀(`spring.task.scheduling.pool.size=5`)
+- [x] Next.js 골격: rewrites, 공통 fetch 래퍼, `lib/query-keys.ts`, 로그인 화면
+- [ ] 레이아웃·GNB·인증 가드 (목업 PNG 수령 후), 사용자 관리 API
 - [ ] **M1**: DDL 적용, 로그인 동작, 인터페이스 합의, Mailpit 발송 1통
 
 ## W2

@@ -35,11 +35,13 @@
 - [ ] 도메인별 API 목록 초안을 `docs/api/`에 작성
 
 **PL**
-- [ ] 메인 저장소·`infra/docker-compose.yml`(PostgreSQL 17, Mailpit), 백엔드·프론트 저장소 골격
-- [ ] 공통 응답 포맷, 전역 예외 처리, 오류 코드 체계, SpringDoc 설정
-- [ ] 로그인/로그아웃/토큰 재발급(httpOnly 쿠키), CSRF(`GET /api/v1/auth/csrf`), 로그인 5회 실패 잠금
-- [ ] 최초 OWNER 계정 생성, 스케줄러 스레드 풀 설정
-- [ ] Next.js 골격: 레이아웃·GNB, rewrites(`/api/*`), 공통 fetch 래퍼, `lib/query-keys.ts`
+- [x] 메인 저장소·`infra/docker-compose.yml`(PostgreSQL 17, Mailpit), 백엔드·프론트 저장소 골격
+- [x] 공통 응답 포맷, 전역 예외 처리, 오류 코드 체계, SpringDoc 설정
+- [x] 로그인/로그아웃/토큰 재발급(httpOnly 쿠키), CSRF(`GET /api/v1/auth/csrf`), 로그인 5회 실패 잠금
+- [x] 최초 OWNER 계정 생성, 스케줄러 스레드 풀 설정
+- [x] Next.js 골격: rewrites(`/api/*`), 공통 fetch 래퍼, `lib/query-keys.ts`, 로그인 화면
+- [ ] 레이아웃·GNB·인증 가드 (목업 PNG 수령 후)
+- [ ] 사용자 관리 API(`/api/v1/members`)
 
 **팀원1**
 - [ ] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트

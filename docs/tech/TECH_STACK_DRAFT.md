@@ -233,7 +233,7 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | MyBatis Spring Boot Starter | Spring Boot 4 호환 최신 | 4.0.1 |
 | Flyway | Spring Boot BOM 관리 버전 | 11.14.1 |
 | springdoc-openapi | Spring Boot 4 호환 최신 | 3.1.1 |
-| jjwt | 0.12.x 이상 | |
+| jjwt | 0.12.x 이상 | 0.13.0 |
 | AWS SDK v2 BOM | 최신 안정판 | |
 | Apache POI | 5.x | |
 | PostgreSQL (로컬·RDS) | 17 | 17 (docker `postgres:17`) |

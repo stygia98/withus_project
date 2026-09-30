@@ -448,6 +448,7 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 |---|---|---|
 | `COMMON_INVALID_INPUT` | 400 | 요청 형식·검증 실패 (`details`에 필드별 사유) |
 | `COMMON_NOT_FOUND` | 404 | 대상 없음 |
+| `COMMON_INTERNAL_ERROR` | 500 | 예상하지 못한 서버 오류 (서버 로그 확인) |
 | `AUTH_UNAUTHORIZED` | 401 | 로그인 필요 |
 | `AUTH_TOKEN_EXPIRED` | 401 | Access 토큰 만료 (refresh 후 재시도) |
 | `AUTH_INVALID_CREDENTIALS` | 401 | 이메일·비밀번호 불일치 |
