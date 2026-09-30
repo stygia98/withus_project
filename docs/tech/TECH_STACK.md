@@ -1,6 +1,6 @@
-# TECH_STACK_DRAFT.md — 위드어스 (Withus) 기술 스택 초안
+# TECH_STACK.md — 위드어스 (Withus) 기술 스택
 
-> 기준: `docs/prd.md` (PRD v2.3) 2장 · 상태: **초안(DRAFT)** — W1 첫날 팀 합의 후 버전을 고정하고 "초안" 표시를 뗀다.
+> 기준: `docs/prd.md` (PRD v2.3) 2장 · 상태: **확정 (2026-09-30, PL 결정)** — 6장 합의 항목 결정 완료. 이후 변경은 PL 리뷰를 거친다.
 
 스택은 PRD에서 이미 확정됐다. 이 문서는 그 스택을 **실제 의존성·버전·설정 수준**으로 풀어, W1에 저장소를 만들 때 그대로 따라 할 수 있게 한다. 버전은 "메이저 확정 + 마이너는 W1 시점 최신 안정판"을 원칙으로 하고, 확정한 정확한 버전은 5장 표에 기록한다.
 
@@ -113,10 +113,9 @@ ses:
 ```yaml
 # application-local.yml
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/withus
-    username: withus
-    password: withus
+  config:
+    # DB 접속 정보는 infra/.env 에서 읽는다 (6장 결정: 로컬도 비밀번호를 파일에 쓰지 않음)
+    import: optional:file:../infra/.env[.properties]
   mail:
     host: localhost
     port: 1025
@@ -201,19 +200,19 @@ withus_frontend/
 | 메일 | SES (도메인 인증 DKIM·SPF, 프로덕션 액세스) + SNS 토픽 | |
 | 프론트 호스팅 | AWS Amplify (Next.js SSR), 사용자 지정 도메인 `app.<도메인>` | |
 | 형상 관리 | GitHub, 저장소 3개 (메인·프론트·백엔드) | |
-| 코드 스타일 | 백엔드: IntelliJ 기본 + `.editorconfig`, 프론트: ESLint + Prettier | 자동 포맷터 도입은 **팀 합의 필요** |
+| 코드 스타일 | 백엔드: IntelliJ 기본, 프론트: ESLint + Prettier(`npm run format`) | 6장 결정: 자동 포맷터는 프론트 Prettier만 |
 
 ```yaml
 # infra/docker-compose.yml
 services:
   postgres:
     image: postgres:17
-    environment:
-      POSTGRES_DB: withus
-      POSTGRES_USER: withus
-      POSTGRES_PASSWORD: withus
+    environment:          # 값은 infra/.env (커밋 금지, .env.example 참고)
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       TZ: Asia/Seoul
-    ports: ["5432:5432"]
+    ports: ["${DB_PORT:-5432}:5432"]
     volumes: ["pgdata:/var/lib/postgresql/data"]
   mailpit:
     image: axllent/mailpit
@@ -222,7 +221,7 @@ volumes:
   pgdata:
 ```
 
-## 5. 버전 고정표 (W1에 채움)
+## 5. 버전 고정표
 
 W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이후 변경은 PL 리뷰를 거친다.
 
@@ -242,20 +241,25 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | React | 19.x | 19.1.0 |
 | Tailwind CSS | 4.x | 4.3.3 |
 | TanStack Query | 5.x | 5.104.0 |
-| TinyMCE | 최신 (자체 설치) | |
+| TinyMCE | 최신 (자체 설치, GPLv2+) | 설치 시 기록 (팀원2), `license_key: 'gpl'` |
+| Lombok | Spring Boot BOM 관리 버전 | BOM 관리 (허용 어노테이션은 `lombok.config`로 강제) |
+| react-hook-form / zod / @hookform/resolvers | 최신 안정판 | 7.89.0 / 4.6.5 / 5.9.1 |
+| Prettier | 최신 안정판 | 3.9.9 (`.prettierrc`: printWidth 100, `*.md` 제외) |
+| shadcn/ui 기반 | CLI 기본값 | `@base-ui/react`(프리미티브), `cn`(shadcn 공식 클래스 병합 유틸) |
 
-## 6. 합의·확인이 필요한 항목
+## 6. 결정 사항 (2026-09-30 확정)
 
-| 항목 | 내용 | 권장 | 기한 |
-|---|---|---|---|
-| MyBatis·springdoc의 Spring Boot 4 호환 | MyBatis 4.0.1은 Boot 4.0.x까지 지원(Initializr 기준) → Boot 4.0.8 사용. 기동·Flyway V1 적용·Swagger UI 동작 확인 완료 (2026-09-30) | 4.1 지원 MyBatis 출시 시 상향 | 완료 |
-| Lombok 사용 여부 | 보일러플레이트 감소 vs 명시성 | 사용 (허용 어노테이션 제한) | W1 1일차 |
-| 폼 라이브러리 | react-hook-form + zod 추가 | 추가 | W1 1일차 |
-| TinyMCE 라이선스 | 자체 설치 시 라이선스 조건 확인 | 조건이 맞지 않으면 Tiptap으로 대체 검토 | W1 |
-| SES API | `ses`(v1 API) vs `sesv2` | `sesv2` (List-Unsubscribe 헤더 포함 원시 메시지 전송) | W2 |
-| SNS 서명 검증 방식 | SDK 제공 기능 사용 여부 확인, 없으면 직접 구현 | SDK 우선 | W3 |
-| Gemini 모델 | 무료 등급에서 쓸 모델명과 호출 한도 | 가장 가벼운 텍스트 모델 | W1 |
-| 자동 포맷터 | Spotless·Prettier 적용 여부 | 프론트 Prettier만 적용 | W1 |
+| 항목 | 결정 | 근거·적용 |
+|---|---|---|
+| MyBatis·springdoc의 Spring Boot 4 호환 | Spring Boot **4.0.8** 사용 | MyBatis 4.0.1이 Boot 4.0.x까지 지원. 기동·Flyway V1·Swagger 확인 완료. 4.1 지원 MyBatis 출시 시 상향 |
+| Lombok | **사용**, `@Getter`·`@RequiredArgsConstructor`·`@Builder`만 | `pom.xml` 추가. `lombok.config`로 그 외(`@Data`·`@Setter`·`@AllArgsConstructor` 등)는 컴파일 오류 처리. 기존 코드를 Lombok으로 바꿀 필요는 없음 |
+| 폼 라이브러리 | **react-hook-form + zod** (+ `@hookform/resolvers`) | 고객·쿠폰·캠페인 등 폼이 많음. `package.json` 추가 완료 |
+| TinyMCE 라이선스 | **TinyMCE 자체 설치, GPLv2+** (`license_key: 'gpl'`) | 저장소가 공개(GitHub public)라 GPL 소스 공개 의무 충족. Tiptap 대체 불필요 |
+| SES API | **`sesv2`** | List-Unsubscribe 헤더를 포함한 원시 메시지 전송 (W2, 팀원2) |
+| SNS 서명 검증 | **AWS SDK 제공 기능 우선**, 없으면 직접 구현 | W3, 팀원1 |
+| Gemini 모델 | **무료 등급의 가장 가벼운 텍스트 모델** | 정확한 모델명·한도는 팀원3이 W1에 확인해 5장에 기록 |
+| 자동 포맷터 | **프론트 Prettier만** | `.prettierrc`(printWidth 100), `npm run format` / `format:check`, ESLint와 충돌 방지(`eslint-config-prettier`). 백엔드는 IntelliJ 기본 |
+| 로컬 DB 비밀번호 | **`infra/.env`에서 읽음** (파일에 직접 쓰지 않음) | CLAUDE.md 7장 "비밀값은 환경변수로만"과 일치. `.env.example` 복사 후 사용 |
 
 ## 7. 선택하지 않은 대안과 이유
 

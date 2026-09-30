@@ -21,7 +21,7 @@ cd infra && docker compose up -d                  # PostgreSQL 17 + Mailpit(http
 실행 방법은 각 저장소의 README, 협업 절차는 [`docs/workflow-git.md`](docs/workflow-git.md).
 
 - PC에 PostgreSQL이 이미 설치돼 5432를 쓰고 있으면 `infra/.env`의 `DB_PORT`를 5433 등으로 바꾼다.
-- **W1 ERD 확정 전까지 V1 스키마가 바뀔 수 있다.** 백엔드 기동 시 `Migration checksum mismatch` 오류가 나면 [로컬 DB 초기화 절차](docs/workflow-git.md#v1-동결-전-예외와-로컬-db-초기화)를 따른다.
+- 스키마(V1)와 구간 인터페이스는 **확정·동결**됐다 (2026-09-30). 스키마 변경은 새 Flyway 파일로만 한다 → [`docs/workflow-git.md`](docs/workflow-git.md#v1-동결-2026-09-30-확정)
 
 ## 문서
 | 문서 | 용도 |
@@ -32,7 +32,8 @@ cd infra && docker compose up -d                  # PostgreSQL 17 + Mailpit(http
 | [`docs/roles/`](docs/roles/) | 담당별 범위·인터페이스·체크리스트 |
 | [`docs/api/API_SPEC.md`](docs/api/API_SPEC.md) | API 계약 초안 (최종은 Swagger) |
 | [`docs/db/DB_SCHEMA.md`](docs/db/DB_SCHEMA.md) | 스키마, `V1__init.sql` 원본 |
-| [`docs/tech/TECH_STACK_DRAFT.md`](docs/tech/TECH_STACK_DRAFT.md) | 의존성·설정·버전 고정표 |
+| [`docs/tech/TECH_STACK.md`](docs/tech/TECH_STACK.md) | 의존성·설정·버전 고정표 (6장 결정 사항) |
+| [`docs/meetings/`](docs/meetings/) | **결정 기록 — 시작 전 [2026-09-30 킥오프 결정](docs/meetings/2026-09-30-kickoff-decisions.md) 먼저 읽기** |
 
 ## 담당
 PL(기반·통합·배포) · 팀원1(고객: customer, segment) · 팀원2(발송: campaign, workflow) · 팀원3(전환: tracking, coupon, ai)

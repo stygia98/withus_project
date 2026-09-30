@@ -39,16 +39,16 @@ echo "@docs/roles/member1.md" > CLAUDE.local.md   # 본인 번호로
 - 공유 파일(`common`, `application.yml`, `lib/query-keys.ts`)은 PL 리뷰가 필요하다.
 - `docs/`는 메인 저장소에서 커밋한다.
 
-## V1 동결 전 예외와 로컬 DB 초기화
-- `V1__init.sql`은 **W1 ERD 확정 회의까지만** 수정할 수 있다. 수정하면 PL이 팀 채널에 공지한다.
-- 공지를 받으면(또는 기동 시 `Migration checksum mismatch for migration version 1` 오류가 나면) 로컬 DB를 초기화한다. 로컬 DB 데이터는 모두 지워진다.
+## V1 동결 (2026-09-30 확정)
+- `V1__init.sql`과 PRD 10.1 인터페이스 6개(`SegmentService`, `ConsentService`, `TrackingLinkService`, `TrackEventRepository`, `CouponService`, `PlaceholderRenderer`)는 **확정·동결**됐다. V1은 절대 수정하지 않는다.
+- 스키마 변경은 번호 대역에 맞는 새 파일로만 한다 (PL은 `V2`부터). 인터페이스 시그니처 변경은 PL 리뷰를 거친다.
+- local 시드는 버전 번호를 쓰지 않는 `R__seed_local.sql`(반복 실행)이라 번호 대역과 충돌하지 않는다 (`docs/db/DB_SCHEMA.md` 9장).
+- 로컬 DB를 처음부터 다시 만들고 싶으면(데이터 모두 삭제):
   ```bash
   cd infra
   docker compose down -v   # DB 볼륨까지 삭제
-  docker compose up -d     # 백엔드를 다시 띄우면 새 V1이 적용된다
+  docker compose up -d     # 백엔드를 다시 띄우면 마이그레이션이 처음부터 적용된다
   ```
-- 확정 회의 후 V1은 **동결**한다. 이후 스키마 변경은 번호 대역에 맞는 새 파일로만 한다 (PL은 `V2`부터).
-- local 시드는 버전 번호를 쓰지 않는 `R__seed_local.sql`(반복 실행)이라 번호 대역과 충돌하지 않는다 (`docs/db/DB_SCHEMA.md` 9장).
 
 ## 작업 관리
 - 팀 분배·진행 기준은 `docs/roadmap.md` 체크박스다. 항목 단위로 완료 시 갱신하고 PR에 포함한다.

@@ -7,7 +7,7 @@
 - **기준 문서는 `docs/prd.md`(PRD v2.3)다.** 이 파일과 PRD가 다르면 PRD를 따른다.
 - 작업 전에 해당 기능의 PRD 섹션을 먼저 읽는다. PRD에 없는 동작은 **추측해서 만들지 말고 질문한다.**
 - 일정과 담당은 `docs/roadmap.md`를 따른다.
-- 세부 기준: API 계약 `docs/api/API_SPEC.md`, 스키마 `docs/db/DB_SCHEMA.md`(V1 DDL 원본), 의존성·설정 `docs/tech/TECH_STACK_DRAFT.md`, 담당별 범위 `docs/roles/`, Git 절차 `docs/workflow-git.md`.
+- 세부 기준: API 계약 `docs/api/API_SPEC.md`, 스키마 `docs/db/DB_SCHEMA.md`(V1 DDL 원본), 의존성·설정 `docs/tech/TECH_STACK.md`, 담당별 범위 `docs/roles/`, Git 절차 `docs/workflow-git.md`.
 - 워크플로우 엔진, 발송 큐, 세그먼트 동적 쿼리, 인증/CSRF는 **코드를 쓰기 전에 계획(Plan)을 먼저 제시**하고 승인받는다.
 - 아래 기술 스택 외의 라이브러리는 추가하지 않는다. 필요하면 이유와 함께 먼저 묻는다.
 

@@ -30,9 +30,9 @@
 **목표:** 모두가 같은 스키마와 API 계약 위에서 병렬로 개발할 수 있게 한다.
 
 **공통 (첫 2일, 전원)**
-- [ ] PRD 7장 기준 ERD 확정, Flyway `V1__init.sql` 작성 (18개 테이블, 부분 유니크 인덱스 포함)
-- [ ] PRD 10.1 구간 간 연결 인터페이스 시그니처 합의 (`SegmentService`, `TrackingLinkService`, `CouponService`, `TrackEventRepository` 등)
-- [ ] 도메인별 API 목록 초안을 `docs/api/`에 작성
+- [x] PRD 7장 기준 ERD 확정, Flyway `V1__init.sql` 작성 (18개 테이블, 부분 유니크 인덱스 포함)
+- [x] PRD 10.1 구간 간 연결 인터페이스 시그니처 확정 (`SegmentService`, `ConsentService`, `TrackingLinkService`, `TrackEventRepository`, `CouponService`, `PlaceholderRenderer`)
+- [x] 도메인별 API 목록 초안을 `docs/api/`에 작성 (`docs/api/API_SPEC.md`)
 
 **PL**
 - [x] 메인 저장소·`infra/docker-compose.yml`(PostgreSQL 17, Mailpit), 백엔드·프론트 저장소 골격

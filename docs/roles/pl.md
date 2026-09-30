@@ -11,9 +11,9 @@
 - [x] 메인 저장소: `CLAUDE.md`, `docs/`, `.github/`, `.gitignore`, `infra/docker-compose.yml`(PostgreSQL 17, Mailpit), `infra/.env.example`
 - [x] backend 골격(Spring Boot 4.0.8, SpringDoc, 설정·타임존·스케줄러 풀) — 컴파일 확인
 - [x] frontend 골격(Next.js 15, shadcn/ui, TanStack Query, sonner, rewrites, `lib/api-client.ts`, `lib/query-keys.ts`) — lint·build 확인
-- [x] `V1__init.sql` 초안(18개 테이블, 부분 유니크 인덱스) — 로컬 적용 확인(18개 테이블, 타임존 Asia/Seoul). **전원 ERD 검토 후 확정**
-- [x] PRD 10.1 인터페이스 시그니처 초안: `SegmentService`, `ConsentService`, `TrackingLinkService`, `CouponService`, `TrackEventRepository`, `PlaceholderRenderer` — **전원 합의 필요**
-- [x] `docs/api/API_SPEC.md`, `docs/db/DB_SCHEMA.md`, `docs/tech/TECH_STACK_DRAFT.md` 초안 — **W1 전원 검토**
+- [x] `V1__init.sql` 초안(18개 테이블, 부분 유니크 인덱스) — 로컬 적용 확인(18개 테이블, 타임존 Asia/Seoul). **확정·동결 (2026-09-30)**
+- [x] PRD 10.1 인터페이스 시그니처 초안: `SegmentService`, `ConsentService`, `TrackingLinkService`, `CouponService`, `TrackEventRepository`, `PlaceholderRenderer` — **확정 (2026-09-30)**
+- [x] `docs/api/API_SPEC.md`, `docs/db/DB_SCHEMA.md`, `docs/tech/TECH_STACK.md` — TECH_STACK 확정(6장 결정 사항), API_SPEC은 초안(최종 계약은 Swagger)
 - [x] Docker 로컬 기동, Flyway V1 적용, Swagger UI, `./mvnw test` 확인
 
 ## W1
