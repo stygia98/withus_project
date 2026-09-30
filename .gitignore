@@ -1,0 +1,16 @@
+# 별도 Git 저장소 (폴리레포)
+withus_frontend/
+withus_backend/
+
+# 개인용 설정·작업 데이터
+CLAUDE.local.md
+shrimp_data/
+.claude/settings.local.json
+.claude/plans/
+
+# 비밀값
+.env
+*.env.local
+
+# 저장소 밖에서 공유하는 파일
+withus_mockup.pdf

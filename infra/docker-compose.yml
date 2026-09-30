@@ -1,0 +1,25 @@
+# 로컬 개발 인프라. 사용 전 .env.example 을 .env 로 복사해 값을 채운다
+services:
+  postgres:
+    image: postgres:17
+    container_name: withus-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Seoul
+      PGTZ: Asia/Seoul
+    ports:
+      - "5432:5432"
+    volumes:
+      - withus-pgdata:/var/lib/postgresql/data
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: withus-mailpit
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # 웹 UI
+
+volumes:
+  withus-pgdata:
