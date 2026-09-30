@@ -1,4 +1,4 @@
-# 2026-09-30 킥오프 결정 사항 (PL 확정)
+# 킥오프 결정 사항 (PL 확정)
 
 W1 첫 회의 안건을 PL이 권장안으로 확정했다. 팀원은 이 문서를 먼저 읽고 시작한다. 이의가 있으면 PL에게 알리고, 바꾸는 경우 이 문서와 해당 기준 문서를 함께 갱신한다.
 
@@ -36,14 +36,21 @@ W1 첫 회의 안건을 PL이 권장안으로 확정했다. 팀원은 이 문서
 ## 3. W1 우선 작업과 기한
 | 담당 | 먼저 할 일 | 기한 | 이유 |
 |---|---|---|---|
-| 팀원1 | `SegmentService`·`ConsentService` **stub** 병합 (고정값 반환) | **W1 수요일** | 팀원2가 기다리지 않고 발송 큐를 개발 |
-| 팀원3 | `TrackingLinkService`·`CouponService`·`TrackEventRepository`·`PlaceholderRenderer` **stub** 병합 | **W1 수요일** | 위와 같음 |
+| 팀원1 | `SegmentService`·`ConsentService` **stub** 병합 (고정값 반환) | **W1 최우선** | 팀원2가 기다리지 않고 발송 큐를 개발 |
+| 팀원3 | `TrackingLinkService`·`CouponService`·`TrackEventRepository`·`PlaceholderRenderer` **stub** 병합 | **W1 최우선** | 위와 같음 |
 | 팀원2 | **발송 큐 설계 Plan** 작성 → PL 승인 | W2 착수 전 | CLAUDE.md: 발송 큐는 Plan 선행 대상. 최대 난이도 구간 |
 | 팀원3 | Gemini 모델명·호출 한도 확인 | W1 | 위 2번 |
 
 stub 은 실제 구현으로 나중에 교체한다. 호출 측 코드는 바꿀 필요가 없다.
 
-## 4. 이미 준비된 것 (PL)
+## 4. 협업 규칙 추가 결정
+| 항목 | 결정 |
+|---|---|
+| 다른 도메인 테이블 | 조회(SELECT)는 자기 mapper에서 직접 가능. 쓰기는 소유 도메인 서비스·인터페이스로만 |
+| roadmap 체크 | 팀원은 PR 설명에 roadmap 항목을 적고, 체크는 PL이 병합할 때 한다 |
+| 일정 | W1~W5는 예상 일정. 실제 시작일·소요 시간은 기록하지 않는다 |
+
+## 5. 이미 준비된 것 (PL)
 - 로그인·CSRF·공통 응답·오류 처리 (사용법: `withus_backend/README.md` "팀원용 사용법")
 - Swagger 에서 `csrf` → `login` 후 POST 테스트 가능 (CSRF 헤더 자동)
 - 최초 OWNER 계정: 각자 `infra/.env`의 `OWNER_EMAIL`/`OWNER_PASSWORD`

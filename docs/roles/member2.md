@@ -13,16 +13,16 @@
 ## 호출하는 인터페이스
 - `SegmentService.findTargetCustomers(segmentId)` (팀원1)
 - `TrackingLinkService.rewrite(html, sendLogId)`, `CouponService.issue(couponId, customerId, sendLogId)` (팀원3)
-- `PlaceholderRenderer.render(template, values)` — 치환자·기본값 처리 (팀원3, 2026-09-30 이관)
+- `PlaceholderRenderer.render(template, values)` — 치환자·기본값 처리 (팀원3, 팀원2에서 이관)
 - 워크플로우 CONDITION → `TrackEventRepository` 조회 (팀원3)
 - 템플릿 에디터 → AI-01 API, 캠페인 생성 화면 → AI-02 API (팀원3)
 
 ## 건드리지 않는 영역
 `customer`, `segment`, `tracking`, `coupon`, `ai`, `auth`, `common`.
 
-## 체크리스트 (roadmap 항목 단위로 체크)
+## 체크리스트 (roadmap 항목과 동일)
 **W1**
-- [ ] 템플릿 CRUD API·화면(**최소 기능**), TinyMCE 연동, `FileStorage`(로컬) 이미지 업로드
+- [ ] 템플릿 CRUD API·화면(**최소 기능**), TinyMCE 연동(자체 설치, `license_key: 'gpl'`), `FileStorage`(로컬) 이미지 업로드
 - [ ] `MessageSender` 인터페이스 + SMTP(Mailpit) 구현, SMS Mock
 - [ ] **발송 큐 설계 Plan 작성 → PL 리뷰·승인** (W2 착수 전). 팀원1·3의 stub 위에서 개발 시작
 
@@ -46,7 +46,10 @@
 
 ## 작업 방식
 - 브랜치·PR 절차는 `docs/workflow-git.md`
-- 세부 분해는 개인 Shrimp 사용(데이터 커밋 금지). roadmap 체크는 항목 단위
+- 세부 분해는 개인 Shrimp 사용(데이터 커밋 금지). 완료한 roadmap 항목은 PR 설명에 적는다 (체크는 PL이 병합 시)
+- 공통 사용법(로그인·응답·오류·Lombok): `withus_backend/README.md` "팀원용 사용법", 프론트(api 호출·쿼리 키·폼·컴포넌트): `withus_frontend/README.md`
+- 다른 도메인 테이블은 조회(SELECT)만 직접 가능, 쓰기는 소유 도메인 서비스로 (`docs/workflow-git.md`)
+- stub 은 실제 구현을 넣을 때 **삭제**한다 (같은 인터페이스 빈이 2개면 기동 실패)
 - **발송 큐·워크플로우 엔진은 코드 전에 Plan 제시 후 PL 승인**
 - 이 구간의 핵심 규칙: 큐 우회 금지(6장 1번), 발송 직전 재확인(2), 08:00~20:50(3), 렌더링·쿠폰은 발송 직전(4), SENDING 10분 초과는 FAILED(5), 외부 호출은 트랜잭션 밖
 - W2 발송 큐가 밀리면 W3 워크플로우가 밀린다. 큐 완성이 최우선

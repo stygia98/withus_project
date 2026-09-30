@@ -560,7 +560,7 @@ CREATE UNIQUE INDEX uq_send_log_one_time
 - 발송(팀원2) → 전환(팀원3): `TrackingLinkService.rewrite(html, sendLogId)`, `CouponService.issue(couponId, customerId, sendLogId)`
 - 워크플로우 CONDITION(팀원2) → 전환(팀원3): `TrackEventRepository` 조회
 - 대시보드·리포트(팀원3) → 발송(팀원2): `send_log` 집계
-- 발송 렌더링(팀원2) → 전환(팀원3): `PlaceholderRenderer`(치환자·기본값 처리, F-04). 팀원2 부담 분산을 위해 팀원3으로 이관 (2026-09-30 조정, roadmap 4장)
+- 발송 렌더링(팀원2) → 전환(팀원3): `PlaceholderRenderer`(치환자·기본값 처리, F-04). 팀원2 부담 분산을 위해 팀원3으로 이관 (roadmap 4장)
 - 템플릿 에디터(팀원2) → AI-01 API(팀원3), 캠페인 생성 화면(팀원2) → AI-02 API(팀원3), SES 웹훅(팀원1) → send_log의 provider_message_id로 고객 조회(팀원2), 구매 등록(팀원1) → 쿠폰 사용 처리 CouponService(팀원3)
 
 ### 10.2 주차별 일정

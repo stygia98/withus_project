@@ -1,6 +1,6 @@
 # API_SPEC.md — 위드어스 (Withus) API 명세
 
-> 기준: `docs/prd.md` (PRD v2.3) · 스키마: `docs/db/DB_SCHEMA.md` · 최종 계약은 SpringDoc(Swagger UI)이며 이 문서는 W1 합의용 초안이다.
+> 기준: `docs/prd.md` (PRD v2.3) · 스키마: `docs/db/DB_SCHEMA.md` · 최종 계약은 SpringDoc(Swagger UI)이며 이 문서는 도메인별 API 목록 초안이다. 각 담당이 구현하면서 확정하고, 요청·응답 형식을 바꾸면 이 문서도 함께 고친다. 인증(2장)은 구현 완료.
 
 ## 1. 공통 규칙
 
@@ -72,7 +72,7 @@
 | POST | `/api/v1/auth/refresh` | 공개(쿠키) | Access 재발급, Refresh 교체 |
 | POST | `/api/v1/auth/logout` | 로그인 | Refresh 무효화, 쿠키 만료 |
 | GET | `/api/v1/auth/me` | 로그인 | 내 정보 |
-| GET | `/api/v1/members` | O | 사용자 목록 |
+| GET | `/api/v1/members` | O | 사용자 목록 (미구현, PL) |
 | POST | `/api/v1/members` | O | 사용자 생성 |
 | PATCH | `/api/v1/members/{memberId}` | O | 역할·활성 여부 변경 |
 
@@ -85,7 +85,7 @@
 { "memberId": 2, "email": "manager@withus.kr", "name": "김마케팅", "role": "MANAGER" }
 ```
 
-오류: `AUTH_INVALID_CREDENTIALS`(401), `AUTH_ACCOUNT_LOCKED`(401, `lockedUntil` 포함, 5회 실패 시 5분), `AUTH_ACCOUNT_INACTIVE`(401).
+오류: `AUTH_INVALID_CREDENTIALS`(401), `AUTH_ACCOUNT_LOCKED`(401, `error.details.lockedUntil` 포함, 5회 실패 시 5분), `AUTH_ACCOUNT_INACTIVE`(401).
 
 ## 3. 고객 (팀원1 · `customer`)
 

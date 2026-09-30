@@ -12,12 +12,15 @@ fix/·hotfix/ 도 같은 방식
 
 ## 처음 세팅 (팀원, 1회)
 ```bash
-git clone <withus 주소> && cd withus
-git clone <withus_backend 주소>
-git clone <withus_frontend 주소>
+# 폴더 이름을 withus 로 맞춘다 (저장소 이름은 withus_project)
+git clone https://github.com/stygia98/withus_project.git withus && cd withus
+git clone https://github.com/stygia98/withus_backend.git     # 반드시 withus 폴더 안에
+git clone https://github.com/stygia98/withus_frontend.git
 echo "@docs/roles/member1.md" > CLAUDE.local.md   # 본인 번호로
+cp infra/.env.example infra/.env                  # 값 입력
+cd infra && docker compose up -d
 ```
-`CLAUDE.local.md`는 `.gitignore` 대상이라 커밋되지 않는다. 이후 `cd infra && docker compose up -d`.
+`CLAUDE.local.md`와 `infra/.env`는 `.gitignore` 대상이라 커밋되지 않는다. 기본 브랜치가 `dev`라 clone 하면 바로 `dev`가 받아진다.
 
 ## 작업 루틴
 1. `git switch dev && git pull` → `git switch -c feature/도메인-기능`
@@ -34,12 +37,13 @@ echo "@docs/roles/member1.md" > CLAUDE.local.md   # 본인 번호로
 - `main`·`dev` 브랜치 보호(직접 push 금지, PR 필수) 설정
 
 ## 충돌 예방
-- Flyway 번호 대역: PL `V1~V9`, 팀원1 `V10~V19`, 팀원2 `V20~V29`, 팀원3 `V30~V39` (부족하면 PL과 협의). 같은 번호가 생기면 기동이 실패한다.
+- Flyway 번호 대역: PL `V1(동결)~V9`, 팀원1 `V10~V19`, 팀원2 `V20~V29`, 팀원3 `V30~V39` (부족하면 PL과 협의). 같은 번호가 생기면 기동이 실패한다.
   - 대역 때문에 낮은 번호(예: PL `V2`)가 높은 번호(`V10`) 뒤에 추가될 수 있어 `spring.flyway.out-of-order: true`로 둔다. 그래서 **적용 순서가 PC마다 다를 수 있다.** 다른 대역의 마이그레이션이 만드는 테이블·컬럼에 의존하는 SQL은 쓰지 말고, 필요하면 해당 담당자·PL과 먼저 맞춘다.
 - 공유 파일(`common`, `application.yml`, `lib/query-keys.ts`)은 PL 리뷰가 필요하다.
+- **다른 도메인 테이블**: 조회(SELECT)는 자기 mapper XML에서 해도 된다. 쓰기(INSERT·UPDATE·DELETE)는 소유 도메인의 서비스·인터페이스로만 한다 (예: 대시보드의 `send_log` 집계, 휴면 배치의 `track_event` 조회는 직접 SELECT 가능).
 - `docs/`는 메인 저장소에서 커밋한다.
 
-## V1 동결 (2026-09-30 확정)
+## V1 동결
 - `V1__init.sql`과 PRD 10.1 인터페이스 6개(`SegmentService`, `ConsentService`, `TrackingLinkService`, `TrackEventRepository`, `CouponService`, `PlaceholderRenderer`)는 **확정·동결**됐다. V1은 절대 수정하지 않는다.
 - 스키마 변경은 번호 대역에 맞는 새 파일로만 한다 (PL은 `V2`부터). 인터페이스 시그니처 변경은 PL 리뷰를 거친다.
 - local 시드는 버전 번호를 쓰지 않는 `R__seed_local.sql`(반복 실행)이라 번호 대역과 충돌하지 않는다 (`docs/db/DB_SCHEMA.md` 9장).
@@ -51,6 +55,6 @@ echo "@docs/roles/member1.md" > CLAUDE.local.md   # 본인 번호로
   ```
 
 ## 작업 관리
-- 팀 분배·진행 기준은 `docs/roadmap.md` 체크박스다. 항목 단위로 완료 시 갱신하고 PR에 포함한다.
+- 팀 분배·진행 기준은 `docs/roadmap.md` 체크박스다. roadmap은 메인 저장소에 있어 코드 PR에 함께 넣을 수 없으므로, **PR 설명에 해당 roadmap 항목을 적고 체크는 PL이 병합할 때 한다.**
 - 세부 작업 분해는 각자 Shrimp를 쓴다. Shrimp 데이터는 커밋하지 않는다.
 - 발송 큐·워크플로우 엔진·인증·세그먼트 SQL은 코드 전에 Plan을 제시하고 PL 승인을 받는다.

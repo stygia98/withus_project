@@ -1,6 +1,6 @@
 # TECH_STACK.md — 위드어스 (Withus) 기술 스택
 
-> 기준: `docs/prd.md` (PRD v2.3) 2장 · 상태: **확정 (2026-09-30, PL 결정)** — 6장 합의 항목 결정 완료. 이후 변경은 PL 리뷰를 거친다.
+> 기준: `docs/prd.md` (PRD v2.3) 2장 · 상태: **확정 (PL 결정)** — 6장 합의 항목 결정 완료. 이후 변경은 PL 리뷰를 거친다.
 
 스택은 PRD에서 이미 확정됐다. 이 문서는 그 스택을 **실제 의존성·버전·설정 수준**으로 풀어, W1에 저장소를 만들 때 그대로 따라 할 수 있게 한다. 버전은 "메이저 확정 + 마이너는 W1 시점 최신 안정판"을 원칙으로 하고, 확정한 정확한 버전은 5장 표에 기록한다.
 
@@ -40,22 +40,22 @@
 
 | 목적 | 의존성 | 비고 |
 |---|---|---|
-| 웹 | `spring-boot-starter-web` | REST |
+| 웹 | `spring-boot-starter-webmvc` | REST (Boot 4 에서 `starter-web` 이름이 바뀜) |
 | 검증 | `spring-boot-starter-validation` | 요청 DTO `@Valid` |
 | 보안 | `spring-boot-starter-security` | 쿠키 JWT 필터, CSRF(SPA 설정) |
 | JWT | `io.jsonwebtoken:jjwt-api`, `jjwt-impl`, `jjwt-jackson` | Access 30분 / Refresh 7일 |
 | DB | `org.postgresql:postgresql` | |
-| SQL 매퍼 | `org.mybatis.spring.boot:mybatis-spring-boot-starter` | **Spring Boot 4 호환 버전 확인 필요** |
-| 마이그레이션 | `org.flywaydb:flyway-core`, `flyway-database-postgresql` | PostgreSQL 모듈 별도 필요 |
-| API 문서 | `org.springdoc:springdoc-openapi-starter-webmvc-ui` | **Spring Boot 4 호환 버전 확인 필요** |
+| SQL 매퍼 | `org.mybatis.spring.boot:mybatis-spring-boot-starter` | 4.0.1 (Boot 4.0.x 호환, 5장) |
+| 마이그레이션 | `spring-boot-starter-flyway`, `flyway-database-postgresql` | PostgreSQL 모듈 별도 필요. `out-of-order: true`(번호 대역) |
+| API 문서 | `org.springdoc:springdoc-openapi-starter-webmvc-ui` | 3.1.1 (Boot 4 동작 확인) |
 | 메일(로컬) | `spring-boot-starter-mail` | SMTP → Mailpit(1025) |
 | AWS | AWS SDK for Java v2: `ses`(또는 `sesv2`), `s3` | BOM으로 버전 통일 |
 | 엑셀 | `org.apache.poi:poi-ooxml` | xlsx 업로드·양식 다운로드 |
 | CSV | `org.apache.commons:commons-csv` | csv 업로드 |
 | HTTP 클라이언트 | Spring `RestClient` (내장) | Gemini REST 호출, 별도 SDK 없이 |
 | 속도 제한 | 직접 구현한 토큰 버킷 (단일 인스턴스) | 외부 라이브러리 없이 `ses.max-send-rate` 적용 |
-| 보일러플레이트 | Lombok | **팀 합의 필요** (쓰면 `@Getter`, `@RequiredArgsConstructor`, `@Builder`만) |
-| 테스트 | `spring-boot-starter-test`(JUnit 5, AssertJ, Mockito), `org.testcontainers:postgresql` | MyBatis 쿼리는 실제 PostgreSQL로 테스트 |
+| 보일러플레이트 | Lombok | 사용 (6장 결정). `@Getter`, `@RequiredArgsConstructor`, `@Builder`만 — `lombok.config`로 강제 |
+| 테스트 | `spring-boot-starter-*-test`(JUnit 5, AssertJ, Mockito, MockMvc) | MyBatis 쿼리는 **로컬 Docker PostgreSQL**로 테스트(`@Transactional` 롤백). Testcontainers는 쓰지 않음 |
 
 **사용하지 않는 것**: JPA/Hibernate, QueryDSL, Spring Batch, ShedLock, Redis, 메시지 브로커(Kafka·RabbitMQ·SQS). 발송 큐는 `send_log` 테이블 + `FOR UPDATE SKIP LOCKED`로 충분하다.
 
@@ -65,12 +65,14 @@
 src/main/resources/
 ├─ application.yml             공통
 ├─ application-local.yml       로컬 (docker compose, Mailpit, 로컬 디스크, SMS Mock)
-├─ application-prod.yml        운영 (RDS, SES, S3) — 비밀값은 환경변수
+├─ application-prod.yml        운영 (RDS, SES, S3) — 비밀값은 환경변수 (W5 작성)
 ├─ mapper/{domain}/*.xml
 └─ db/migration/
    ├─ V1__init.sql
    └─ local/R__seed_local.sql   (local 프로필에서만 locations에 포함, 반복 실행 마이그레이션)
 ```
+
+아래는 요약이다. **실제 기준은 `withus_backend/src/main/resources/application.yml`** 이다.
 
 ```yaml
 # application.yml (핵심만)
@@ -104,8 +106,14 @@ withus:
     start: "08:00"
     end: "20:50"
   jwt:
+    secret: ${JWT_SECRET}
     access-ttl: 30m
     refresh-ttl: 7d
+  cookie:
+    secure: true         # local 에서만 false
+  owner:
+    email: ${OWNER_EMAIL:}
+    password: ${OWNER_PASSWORD:}
 ses:
   max-send-rate: 1
 ```
@@ -159,7 +167,7 @@ withus:
 | 서버 상태 | `@tanstack/react-query` v5 | 쿼리 키는 `lib/query-keys.ts` |
 | 메일 에디터 | `@tinymce/tinymce-react` + `tinymce` (자체 설치) | **도입 전 라이선스 조건 확인** |
 | 워크플로우 캔버스 | `@xyflow/react` (React Flow) | 선택 기능 |
-| 폼 | `react-hook-form` + `zod` | **팀 합의 필요** (PRD 미기재, 폼이 많아 추가 권장) |
+| 폼 | `react-hook-form` + `zod` + `@hookform/resolvers` | 사용 (6장 결정) |
 
 ### 3.3 폴더 구조
 
@@ -247,7 +255,7 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | Prettier | 최신 안정판 | 3.9.9 (`.prettierrc`: printWidth 100, `*.md` 제외) |
 | shadcn/ui 기반 | CLI 기본값 | `@base-ui/react`(프리미티브), `cn`(shadcn 공식 클래스 병합 유틸) |
 
-## 6. 결정 사항 (2026-09-30 확정)
+## 6. 결정 사항
 
 | 항목 | 결정 | 근거·적용 |
 |---|---|---|

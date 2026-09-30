@@ -1,6 +1,6 @@
 # DB_SCHEMA.md — 위드어스 (Withus) 데이터베이스 스키마
 
-> 기준: `docs/prd.md` (PRD v2.3) 7장 · DB: PostgreSQL 17 · 마이그레이션: Flyway `V1__init.sql` · 상태: **V1 확정·동결 (2026-09-30)**
+> 기준: `docs/prd.md` (PRD v2.3) 7장 · DB: PostgreSQL 17 · 마이그레이션: Flyway `V1__init.sql` · 상태: **V1 확정·동결**
 
 이 문서는 W1에 작성할 `V1__init.sql`의 기준이다. 스키마를 바꿀 때는 이 문서와 새 Flyway 파일을 함께 갱신한다. 이미 적용된 마이그레이션은 수정하지 않는다.
 

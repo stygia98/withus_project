@@ -31,6 +31,7 @@ withus/                    ← 메인 저장소: 문서·로컬 인프라·배�
 
 ```bash
 # 로컬 인프라 (메인 저장소)
+cp infra/.env.example infra/.env          # 처음 한 번 (비밀값, 커밋 금지)
 cd infra && docker compose up -d          # PostgreSQL 17 + Mailpit
 # Mailpit 웹 UI: http://localhost:8025
 
@@ -43,6 +44,7 @@ cd withus_backend
 # 프론트엔드
 cd withus_frontend
 npm run dev        # http://localhost:3000 (/api/* 는 rewrites로 백엔드 8080에 프록시)
+npm run format     # Prettier
 npm run lint
 npm run build
 ```
@@ -154,6 +156,7 @@ resources/db/migration/V{n}__{설명}.sql
 - 한 번에 하나의 기능만 작업하고, 작은 단위로 커밋한다.
 - 커밋 메시지: `feat(segment): 조건 빌더 미리보기 API 추가`, `fix(workflow): ...`, `refactor`, `test`, `docs`, `chore`.
 - 다른 팀원 담당 도메인의 코드를 바꿔야 하면 직접 고치지 말고, PRD 10.1의 **구간 간 연결 지점 인터페이스**를 통해 호출하거나 먼저 알린다.
+- 다른 도메인 **테이블 조회(SELECT)는 자기 mapper에서 직접 해도 된다.** 쓰기(INSERT·UPDATE·DELETE)는 소유 도메인의 서비스·인터페이스로만 한다.
 - DB 스키마나 API 계약(요청/응답 형식)을 바꾸는 작업은 `docs/`의 ERD·API 계약 문서도 함께 갱신한다.
 - 새 기능을 만들면 PRD 10.3 완료 기준 중 해당 항목을 검증하는 테스트나 확인 절차를 함께 남긴다.
 

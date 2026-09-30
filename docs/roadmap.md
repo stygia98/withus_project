@@ -1,6 +1,8 @@
 # 위드어스 (Withus) 개발 로드맵
 
 > 기준 문서: `docs/prd.md` (PRD v2.3) · 기간 5주(W1~W5) · 인원 4명(PL + 팀원 3명)
+>
+> 주차(W1~W5)는 **예상 일정**이다. 실제 시작일·소요 시간은 기록하지 않는다. 체크박스는 PL이 PR 병합 시 갱신한다.
 
 일회성 발송을 W2에 먼저 끝까지 연결한 뒤, W3에 워크플로우·수신거부·쿠폰으로 확장하고, W4에 AI와 통합 테스트를 마쳐 기능을 동결한다. W5는 운영 배포와 시연 검증만 한다.
 
@@ -46,7 +48,7 @@
 **팀원1**
 - [ ] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트
 - [ ] 수신동의 변경과 `consent_history` 기록
-- [ ] **(W1 수 까지)** `SegmentService`·`ConsentService` 임시 구현(stub) 먼저 병합 — 팀원2가 기다리지 않게
+- [ ] **(W1 최우선)** `SegmentService`·`ConsentService` 임시 구현(stub) 먼저 병합 — 팀원2가 기다리지 않게
 
 **팀원2**
 - [ ] 템플릿 CRUD API·화면(최소 기능), TinyMCE 연동, `FileStorage`(로컬) 이미지 업로드
@@ -55,8 +57,8 @@
 
 **팀원3**
 - [ ] 추적 API(`/t/o/{trackingToken}.gif`, `/t/c/{trackingToken}/{linkId}`), 비동기 이벤트 저장
-- [ ] Gemini 클라이언트(개인정보 미전송, 한도 초과 처리)
-- [ ] **(W1 수 까지)** `TrackingLinkService`·`CouponService`·`TrackEventRepository`·`PlaceholderRenderer` stub 먼저 병합
+- [ ] Gemini 클라이언트(개인정보 미전송, 한도 초과 처리), 무료 등급 모델명·한도 확인
+- [ ] **(W1 최우선)** `TrackingLinkService`·`CouponService`·`TrackEventRepository`·`PlaceholderRenderer` stub 먼저 병합
 
 ### W2 — 일회성 발송 끝까지 연결
 
@@ -148,7 +150,7 @@
 | 추적 API·봇 판정 (팀원3, W1~W2) | 워크플로우 CONDITION, 대시보드, 휴면 판정 | `TrackEventRepository` |
 | 도메인 구매·DNS (PL, W2) | SES 인증 (W3), HTTPS·Amplify (W5) | 늦어지면 SES 승인이 W5를 넘길 수 있음 |
 | 쿠폰 발급 (팀원3, W3) | 워크플로우 SEND 노드별 쿠폰, 구매 등록 | `CouponService` |
-| 인터페이스 stub (팀원1·3, W1 수) | 발송 큐 선개발 (팀원2) | 고정값 반환 구현을 먼저 병합하고 실제 구현으로 교체 |
+| 인터페이스 stub (팀원1·3, W1 최우선) | 발송 큐 선개발 (팀원2) | 고정값 반환 구현을 먼저 병합하고 실제 구현으로 교체 |
 | 치환자 렌더러 (팀원3, W2) | 발송 시 렌더링 (팀원2, W2) | `PlaceholderRenderer` |
 
 ## 5. 리스크와 대응
