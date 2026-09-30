@@ -10,7 +10,7 @@ services:
       TZ: Asia/Seoul
       PGTZ: Asia/Seoul
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"   # 로컬에 PostgreSQL 이 이미 설치돼 있으면 .env 의 DB_PORT 변경
     volumes:
       - withus-pgdata:/var/lib/postgresql/data
 
