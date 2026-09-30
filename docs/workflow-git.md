@@ -35,6 +35,7 @@ echo "@docs/roles/member1.md" > CLAUDE.local.md   # 본인 번호로
 
 ## 충돌 예방
 - Flyway 번호 대역: PL `V1~V9`, 팀원1 `V10~V19`, 팀원2 `V20~V29`, 팀원3 `V30~V39` (부족하면 PL과 협의). 같은 번호가 생기면 기동이 실패한다.
+  - 대역 때문에 낮은 번호(예: PL `V2`)가 높은 번호(`V10`) 뒤에 추가될 수 있어 `spring.flyway.out-of-order: true`로 둔다. 그래서 **적용 순서가 PC마다 다를 수 있다.** 다른 대역의 마이그레이션이 만드는 테이블·컬럼에 의존하는 SQL은 쓰지 말고, 필요하면 해당 담당자·PL과 먼저 맞춘다.
 - 공유 파일(`common`, `application.yml`, `lib/query-keys.ts`)은 PL 리뷰가 필요하다.
 - `docs/`는 메인 저장소에서 커밋한다.
 
