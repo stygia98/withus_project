@@ -7,20 +7,18 @@
 ## 1. 전체 구성
 
 ```
-[브라우저] ──https──▶ [AWS Amplify: Next.js 15 SSR]  app.<도메인>
-                          │  rewrites /api/* (쿠키 퍼스트파티, CORS 불필요)
-                          ▼
-                     [EC2: Nginx + Let's Encrypt]      api.<도메인>
-                          │
-                          ▼
-                     [Spring Boot 4 (단일 인스턴스)]
+[브라우저]    ─┐
+[메일 수신자] ─┼─https──▶ [AWS Amplify: Next.js 15 SSR]  <앱>.amplifyapp.com (기본 주소, 도메인 구매 없음)
+[SNS 웹훅]   ─┘                │  rewrites /api/*, /t/* (쿠키 퍼스트파티, CORS 불필요)
+                               ▼  http
+                     [EC2: Spring Boot 4 (단일 인스턴스), 도메인·인증서 없음]
                       ├─ PostgreSQL 17 (RDS, 자동 백업 7일)
                       ├─ AWS SES (메일) ◀── SNS 반송·스팸신고 웹훅
                       ├─ AWS S3 (템플릿 이미지, CSV 원본)
                       ├─ SMS (Mock, 실제 연동은 선택)
                       └─ Google Gemini API (백엔드에서만 호출)
 
-[메일 수신자] ──▶ api.<도메인>/t/**, /api/v1/unsubscribe/one-click/**  (메일 속 링크)
+메일 속 링크(/t/**, /api/v1/unsubscribe/one-click/**)와 SES 웹훅(/api/webhooks/**)도 Amplify 주소로 들어와 프록시된다.
 ```
 
 로컬(W1~W4)은 `docker compose`의 PostgreSQL·Mailpit + 로컬 디스크 + SMS Mock으로 같은 구조를 흉내 낸다. 프로필(`local` / `prod`)만 바꿔 전환한다.
@@ -97,9 +95,9 @@ withus:
     name: 위드어스
     phone: 02-000-0000
     unsubscribe-phone: 080-000-0000
-    from-address: hello@${WITHUS_MAIL_DOMAIN:withus.local}
+    from-address: ${WITHUS_MAIL_FROM:hello@withus.local}   # 운영: SES에 인증한 이메일 주소
   tracking:
-    base-url: ${WITHUS_API_BASE_URL:http://localhost:8080}
+    base-url: ${WITHUS_PUBLIC_BASE_URL:http://localhost:8080}   # 운영: Amplify 주소 (메일 링크 기준)
     bot-click-seconds: 10
     bot-user-agent-keywords: bot,crawler,spider,scanner,preview
   send-window:
@@ -139,7 +137,7 @@ withus:
     secure: false        # 로컬 http
 ```
 
-**운영 환경변수(커밋 금지)**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `HMAC_SECRET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`(가능하면 EC2 IAM 역할로 대체), `S3_BUCKET`, `SES_SNS_TOPIC_ARN`, `GEMINI_API_KEY`, `WITHUS_API_BASE_URL`, `WITHUS_MAIL_DOMAIN`, `OWNER_EMAIL`, `OWNER_PASSWORD`.
+**운영 환경변수(커밋 금지)**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `HMAC_SECRET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`(가능하면 EC2 IAM 역할로 대체), `S3_BUCKET`, `SES_SNS_TOPIC_ARN`, `GEMINI_API_KEY`, `WITHUS_PUBLIC_BASE_URL`(Amplify 주소), `WITHUS_MAIL_FROM`(SES 인증 이메일), `OWNER_EMAIL`, `OWNER_PASSWORD`.
 
 ## 3. 프론트엔드
 
@@ -202,11 +200,11 @@ withus_frontend/
 | 로컬 DB | Docker `postgres:17` | 5432, DB/계정 `withus` |
 | 로컬 메일 | Docker `axllent/mailpit` | SMTP 1025, 웹 UI 8025 |
 | 운영 백엔드 | EC2 1대 (Amazon Linux 또는 Ubuntu), Java 21, systemd 서비스 | |
-| 리버스 프록시·HTTPS | Nginx + Let's Encrypt(certbot 자동 갱신) | |
+| 리버스 프록시·HTTPS | 없음. Amplify 기본 주소(HTTPS) + Next.js rewrites(`/api/*`, `/t/*`) | 도메인 구매 없음(PRD 10.4). EC2 보안 그룹은 백엔드 포트만 연다 |
 | 운영 DB | RDS PostgreSQL 17, 자동 백업 7일 | EC2 보안 그룹에서만 접근 |
 | 파일 | S3 (이미지 경로만 공개 읽기) | |
-| 메일 | SES (도메인 인증 DKIM·SPF, 프로덕션 액세스) + SNS 토픽 | |
-| 프론트 호스팅 | AWS Amplify (Next.js SSR), 사용자 지정 도메인 `app.<도메인>` | |
+| 메일 | SES 이메일 주소 인증 + 샌드박스(인증된 수신 주소, 초당 1건) + SNS 토픽 | 도메인 인증이 없어 스팸함 분류 가능. 대안: Mailpit 녹화 |
+| 프론트 호스팅 | AWS Amplify (Next.js SSR), 기본 주소 `*.amplifyapp.com` | 메일 링크·웹훅의 진입 주소도 겸함 |
 | 형상 관리 | GitHub, 저장소 3개 (메인·프론트·백엔드) | |
 | 코드 스타일 | 백엔드: IntelliJ 기본, 프론트: ESLint + Prettier(`npm run format`) | 6장 결정: 자동 포맷터는 프론트 Prettier만 |
 
@@ -280,4 +278,5 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | JWT를 localStorage에 저장 | XSS에 취약. httpOnly 쿠키 + CSRF로 결정 |
 | CORS로 프론트·백엔드 직접 통신 | 쿠키·CORS 설정이 복잡해져 Next.js rewrites 프록시로 결정 |
 | OpenAI·Claude API | 비용 때문에 Gemini 무료 등급 선택. 개인정보는 보내지 않음 |
-| ALB + ACM | 월 고정 비용. EC2 Nginx + Let's Encrypt로 결정 |
+| ALB + ACM | 월 고정 비용 |
+| 도메인 구매 + Nginx + Let's Encrypt | 비용 0원 목표. Amplify 기본 주소(HTTPS)와 rewrites 프록시로 대체. 대신 SES는 도메인 인증 없이 샌드박스로 운영 |

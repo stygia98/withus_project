@@ -14,7 +14,7 @@
 | 추적 | `/t/**` | 불필요 |
 | 웹훅 | `/api/webhooks/**` | 불필요 (SNS 서명 검증) |
 
-- 브라우저는 프론트 도메인의 `/api/*`만 호출하고, Next.js rewrites가 백엔드로 넘긴다. 메일에 들어가는 추적·수신거부 링크만 백엔드 도메인(`https://api.<도메인>`)을 직접 쓴다.
+- 브라우저는 프론트 도메인의 `/api/*`만 호출하고, Next.js rewrites가 백엔드로 넘긴다. 메일에 들어가는 추적(`/t/**`)·수신거부 링크와 SES 웹훅도 같은 프론트 주소로 들어와 프록시된다 (도메인 미구매, PRD 10.4). 링크 기준 주소는 `withus.tracking.base-url`.
 - 본문은 JSON(`application/json`), 파일 업로드는 `multipart/form-data`.
 
 ### 1.2 응답 형식

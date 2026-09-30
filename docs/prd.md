@@ -95,9 +95,9 @@ withus/                         ← 메인 저장소 (문서·인프라)
 | 파일 | 로컬 디스크 | S3 |
 
 - 발송·파일을 인터페이스로 분리해 두는 것이 이 전환을 코드 수정 없이 하기 위한 핵심이다.
-- 관리자·고객 페이지의 모든 API 호출은 Next.js rewrites(/api/* → 백엔드)로 프록시한다. 브라우저는 프론트 도메인(예: app.withus.kr)만 호출하므로 CORS를 열 필요가 없고, 인증·CSRF 쿠키도 프론트 도메인의 퍼스트파티 쿠키로 동작한다(로컬 localhost:3000 → localhost:8080도 같은 방식). Next.js 서버 컴포넌트가 백엔드를 직접 호출할 때는 요청의 쿠키를 전달한다. 백엔드는 HTTPS(EC2의 Nginx + Let's Encrypt 인증서, certbot 자동 갱신)의 별도 도메인(예: api.withus.kr)으로 열며, 이 도메인은 메일에 들어가는 추적·수신거부·원클릭 수신거부 링크와 SES 웹훅에만 쓴다. 로컬(http)에서는 쿠키의 Secure 플래그를 프로필 설정으로 끈다.
+- 관리자·고객 페이지의 모든 API 호출은 Next.js rewrites(/api/* → 백엔드)로 프록시한다. 브라우저는 프론트 주소(Amplify 기본 주소, 예: main.xxxx.amplifyapp.com)만 호출하므로 CORS를 열 필요가 없고, 인증·CSRF 쿠키도 프론트 도메인의 퍼스트파티 쿠키로 동작한다(로컬 localhost:3000 → localhost:8080도 같은 방식). Next.js 서버 컴포넌트가 백엔드를 직접 호출할 때는 요청의 쿠키를 전달한다. 도메인은 구매하지 않는다(10.4). 메일에 들어가는 추적(`/t/*`)·수신거부·원클릭 수신거부 링크와 SES 웹훅도 모두 Amplify 주소(HTTPS)로 받아 Next.js rewrites로 백엔드에 넘긴다. 백엔드(EC2)에는 별도 도메인·인증서를 두지 않는다. 로컬(http)에서는 쿠키의 Secure 플래그를 프로필 설정으로 끈다.
 
-- [ ] SES는 샌드박스 해제에 수일이 걸릴 수 있으므로 W3에 미리 신청 (PL)
+- [ ] SES는 도메인 없이 이메일 주소 인증 + 샌드박스로 운영한다(8.2). 발신 주소와 시연 수신 주소를 W3에 미리 인증 (PL)
 
 ### 2.4 기술 공통 규칙
 
@@ -430,7 +430,7 @@ CREATE UNIQUE INDEX uq_send_log_one_time
 
 ### 8.2 메일 발송 (AWS SES)
 
-- W1~W4는 MessageSender의 SMTP 구현으로 Mailpit에 발송해 확인한다. PL이 W3에 SES 도메인 인증(DKIM, SPF)과 프로덕션 액세스(샌드박스 해제)를 신청한다. 승인 전에는 인증된 주소로만 테스트한다.
+- W1~W4는 MessageSender의 SMTP 구현으로 Mailpit에 발송해 확인한다. 운영은 도메인 없이 SES **이메일 주소 인증**(발신 주소 1개)과 **샌드박스** 상태로 한다. 샌드박스에서는 인증된 수신 주소로만 발송되고 초당 1건·하루 200건 한도가 있으므로, PL이 W3에 시연 수신 주소를 미리 인증한다. 발신 도메인 인증(DKIM·SPF)이 없어 수신 측에서 스팸함으로 분류될 수 있으며, 실제 도착 시연이 어려우면 Mailpit 녹화로 대체한다.
 - 발송 속도는 SES 계정의 초당 한도를 넘지 않도록 설정값(`ses.max-send-rate`)으로 조절한다.
 - SES 반송(Bounce, Permanent)과 스팸신고(Complaint)를 SNS → `POST /api/webhooks/ses`로 수신해 해당 고객의 이메일 수신동의를 N으로 바꾸고 `consent_history`에 기록한다.
 - 발송 결과는 `send_log`에 `provider_message_id`와 함께 저장한다.
@@ -510,7 +510,7 @@ CREATE UNIQUE INDEX uq_send_log_one_time
 
 - Spring 프로필: `local`(docker compose PostgreSQL, Mailpit, 로컬 디스크, SMS Mock), `prod`(RDS, SES, S3). 프로필 전환 외 코드 수정 없이 배포되어야 한다.
 - 운영 구성: EC2(백엔드 1대) + RDS PostgreSQL + S3 + SES + AWS Amplify(프론트, Next.js SSR). RDS 자동 백업(보관 7일)을 켠다.
-- 백엔드는 HTTPS(EC2의 Nginx + Let's Encrypt 인증서, certbot 자동 갱신)의 별도 도메인으로 연다. 관리자·고객 페이지 API는 Next.js rewrites로 프록시하므로 CORS를 열지 않는다(2.3).
+- 도메인·HTTPS 인증서를 따로 두지 않는다. 브라우저 요청·메일 링크·SES 웹훅은 모두 Amplify 주소(HTTPS)로 들어와 Next.js rewrites(`/api/*`, `/t/*`)로 EC2 백엔드에 전달된다(2.3). CORS는 열지 않는다. EC2는 Amplify에서 오는 HTTP 요청을 받도록 보안 그룹에서 백엔드 포트만 연다.
 - 비밀값(DB 비밀번호, JWT 키, AWS 키, Gemini 키, HMAC 키)은 환경변수로만 주입하고 저장소에 커밋하지 않는다.
 - S3 버킷은 이미지 경로만 공개 읽기를 허용한다. 발신자 명칭·연락처·080 수신거부 번호 등 "시스템 설정값"은 프로필별 application.yml(withus.sender.*)에서 관리한다.
 
@@ -568,16 +568,16 @@ CREATE UNIQUE INDEX uq_send_log_one_time
 | 주차 | PL | 팀원1 (고객) | 팀원2 (발송) | 팀원3 (전환) |
 |---|---|---|---|---|
 | W1 | 저장소·docker compose·Flyway V1, 인증, 공통 모듈, Next.js 골격 | 고객 CRUD, 도메인 API 명세 | 템플릿 CRUD, Mailpit 발송 확인 | 추적 API, Gemini 클라이언트 |
-| W2 | 일회성 발송 E2E 통합, 도메인 구매·DNS 설정 | CSV 업로드, 세그먼트 빌더 | 일회성 예약 발송, 링크 치환 연결 | 메인 대시보드, 캠페인 성과 차트 |
-| W3 | SES 신청, 통합 테스트 | 수신거부·수신거부 목록, 동의 이력, 휴면 배치, SES 웹훅(Mock 검증), 구매 등록 | 워크플로우 엔진·빌더(폼) | 쿠폰, `/c/[token]`, 전환 집계 |
+| W2 | 일회성 발송 E2E 통합 | CSV 업로드, 세그먼트 빌더 | 일회성 예약 발송, 링크 치환 연결 | 메인 대시보드, 캠페인 성과 차트 |
+| W3 | SES 이메일 주소 인증, 통합 테스트 | 수신거부·수신거부 목록, 동의 이력, 휴면 배치, SES 웹훅(Mock 검증), 구매 등록 | 워크플로우 엔진·빌더(폼) | 쿠폰, `/c/[token]`, 전환 집계 |
 | W4 | 통합 테스트, 코드 리뷰 | 수신동의 2년 확인 안내(F-12), 버그 수정 | 워크플로우 안정화, A/B 테스트(선택) | AI-01, AI-02, AI-03, 성과 리포트 마무리 |
-| W5 | AWS 배포(EC2·RDS·S3·SES·Amplify), HTTPS·rewrites 프록시 | 운영 검증 | 운영 검증 | 운영 검증 |
+| W5 | AWS 배포(EC2·RDS·S3·SES·Amplify), rewrites 프록시(`/api/*`, `/t/*`) | 운영 검증 | 운영 검증 | 운영 검증 |
 
 ### 10.3 완료 기준 (시연 시나리오)
 
 - [ ] CSV로 고객 100명 업로드 후 성공/실패 건수가 표시된다
 - [ ] "서울·경기, 구매액 10만 원 이상" 세그먼트를 만들고 대상 수가 미리보기된다
-- [ ] 일회성 캠페인을 예약하면 지정 시각에 메일이 도착하고(로컬 Mailpit, 운영 SES) 제목에 (광고)가 붙어 있다
+- [ ] 일회성 캠페인을 예약하면 지정 시각에 메일이 도착하고(로컬 Mailpit, 운영 SES — 인증된 수신 주소) 제목에 (광고)가 붙어 있다
 - [ ] 메일을 열고 링크를 누르면 대시보드에 오픈·클릭이 반영된다
 - [ ] 6.4 예시 구조의 워크플로우가 클릭/미클릭 고객에 따라 다른 메시지를 보낸다
 - [ ] 메일로 받은 쿠폰을 `/c/[token]`에서 확인하고, 사용 처리하면 전환율에 반영된다
@@ -634,18 +634,17 @@ CREATE UNIQUE INDEX uq_send_log_one_time
 | 휴면 기준 | 최근 180일 클릭(봇 제외)·구매 없음, 오픈은 판정에서 제외 |
 | 고객 쿠폰 페이지 | 단순 쿠폰 카드형 |
 | 메일 HTML 에디터 | TinyMCE (자체 설치, 도입 전 라이선스 조건 확인) |
-| 백엔드 HTTPS | EC2의 Nginx + Let's Encrypt (certbot 자동 갱신) |
-| 도메인 | 새 도메인 구매 (SES 발신 인증, app·api 서브도메인). 이름은 withus 계열 .kr/.com 중 구매 가능한 것으로 W2까지 확정 |
+| 백엔드 HTTPS | 별도 인증서 없음. Amplify 주소(HTTPS)에서 rewrites로 EC2에 프록시 |
+| 도메인 | **구매하지 않음(비용 0원)**. 프론트는 Amplify 기본 주소, 메일 링크·웹훅도 그 주소로 프록시. 메일은 SES 이메일 주소 인증 + 샌드박스 |
 | 봇 클릭 판정 | 발송 후 10초 이내 클릭, 스캐너 User-Agent, 1초 안 전체 링크 클릭 |
 | 봇 판정 User-Agent | 초기값은 bot·crawler·spider·scanner·preview 키워드를 포함한 UA. 설정 파일로 관리하고 W3 실제 메일 검증 결과로 보강 |
 | 치환자 시스템 기본값 | 이름 → 고객, 지역 → 빈 값, 누적구매액 → 0 |
 | 발신자 명칭·연락처 | 시연용 위드어스 / 02-000-0000 (`withus.sender.name`, `withus.sender.phone`), 운영 전 실제 값으로 교체 |
 | SMS 080 수신거부 번호 | 시연용 가상 번호 080-000-0000 (`withus.sender.unsubscribe-phone`), 실제 SMS 연동(O-03) 시 확보 |
-| SES 초당 발송 한도 | 승인 전 `ses.max-send-rate=1`, 승인 후 AWS가 부여한 한도의 80%로 설정 |
+| SES 초당 발송 한도 | 샌드박스 한도(초당 1건)에 맞춰 `ses.max-send-rate=1` 유지 |
 
 값 교체 일정:
 
-- [ ] 도메인 구매·DNS 설정 (W2, PL)
-- [ ] SES 승인 후 `ses.max-send-rate` 조정 (W3, PL)
+- [ ] SES 발신 주소·시연 수신 주소 인증 (W3, PL)
 - [ ] 봇 판정 User-Agent 목록 보강 (W3, 팀원3)
 - [ ] 발신자 명칭·연락처와 080 번호를 실제 값으로 교체 (W5 운영 배포 전, PL)
