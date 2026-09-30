@@ -7,7 +7,8 @@
 ## Phase 0 — 시작 기반 (W1 첫 2일)
 - [x] 로컬 저장소 3개 `git init` (main)
 - [x] 최초 커밋, `dev` 브랜치, 원격 연결(stygia98/withus_project·withus_backend·withus_frontend)
-- [ ] push, GitHub 기본 브랜치 `dev` 지정, 브랜치 보호(직접 push 금지·PR 필수), 팀원 초대
+- [x] push (main·dev, 3개 저장소)
+- [ ] GitHub 설정: 기본 브랜치 `dev`, 브랜치 보호(PR 필수·승인 1, 관리자 우회 허용), 팀원 초대 — 3개 저장소 각각
 - [x] 메인 저장소: `CLAUDE.md`, `docs/`, `.github/`, `.gitignore`, `infra/docker-compose.yml`(PostgreSQL 17, Mailpit), `infra/.env.example`
 - [x] backend 골격(Spring Boot 4.0.8, SpringDoc, 설정·타임존·스케줄러 풀) — 컴파일 확인
 - [x] frontend 골격(Next.js 15, shadcn/ui, TanStack Query, sonner, rewrites, `lib/api-client.ts`, `lib/query-keys.ts`) — lint·build 확인
