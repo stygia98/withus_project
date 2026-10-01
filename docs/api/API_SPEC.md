@@ -343,6 +343,37 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 
 오류: `COUPON_INVALID_PERIOD`(400), `COUPON_RATE_CAP_REQUIRED`(400), `COUPON_ALREADY_ISSUED`(409).
 
+- 정률(`RATE`)은 `discountValue` 1~100, `maxDiscountAmount` 필수. 정액(`AMOUNT`)의 `maxDiscountAmount`는 무시하고 `null`로 저장한다.
+- `PUT /coupons/{couponId}`는 POST와 같은 본문 전체를 받는다. 발급 이력이 있으면 다른 값은 그대로 두고 `validTo`를 같거나 늦게 바꾸는 것만 허용하며, 그 외 변경은 `COUPON_ALREADY_ISSUED`(409).
+- 날짜는 `YYYY-MM-DD`, 유효기간은 시작일·종료일 당일을 포함한다(Asia/Seoul 기준).
+
+**GET /coupons 응답 data** (페이징, 최근 생성순. 상세·생성·수정 응답은 `content[0]`과 같은 형식)
+
+```json
+{ "content": [ { "couponId": 3, "name": "VIP 감사 쿠폰", "discountType": "RATE", "discountValue": 15, "maxDiscountAmount": 30000,
+    "validFrom": "2026-10-01", "validTo": "2026-10-31", "issuedCount": 120, "usedCount": 18,
+    "createdAt": "2026-09-28T10:00:00+09:00", "updatedAt": "2026-09-28T10:00:00+09:00" } ],
+  "page": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
+```
+
+**GET /coupons/{couponId}/issues 응답 data** (페이징, 최근 발급순. 토큰은 고객 페이지 접근 수단이라 넣지 않는다)
+
+```json
+{ "content": [ { "issueId": 318, "customerId": 501, "customerName": "김민지", "sendLogId": 9001,
+    "issuedAt": "2026-10-02T09:00:03+09:00", "usedAt": null, "status": "USABLE" } ],
+  "page": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
+```
+
+**GET /customers/{customerId}/coupon-issues 응답 data** (페이징 없음, 최근 발급순. `usable=true`면 미사용이고 오늘이 유효기간 안인 것만)
+
+```json
+[ { "issueId": 318, "couponId": 3, "couponName": "VIP 감사 쿠폰", "discountType": "RATE", "discountValue": 15,
+    "maxDiscountAmount": 30000, "validFrom": "2026-10-01", "validTo": "2026-10-31",
+    "issuedAt": "2026-10-02T09:00:03+09:00", "usedAt": null, "status": "USABLE" } ]
+```
+
+발급 상태 `status`는 저장하지 않고 매번 계산한다: 사용했으면 `USED`(기간보다 우선), 시작 전 `NOT_STARTED`, 종료 후 `EXPIRED`, 그 외 `USABLE`.
+
 ## 8. 고객 공개 API (팀원1·팀원3)
 
 | 메서드 | 경로 | 담당 | 설명 |
@@ -362,7 +393,10 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 { "customerName": "김민지", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USABLE" }
 ```
 
-`status`: `USABLE`, `USED`, `EXPIRED`, `NOT_STARTED`. 없는 토큰: `COUPON_NOT_FOUND`(404).
+`status`: `USABLE`, `USED`, `EXPIRED`, `NOT_STARTED`. 없는 토큰(UUID 형식이 아닌 값 포함): `COUPON_NOT_FOUND`(404).
+`customerName`은 첫 글자만 남기고 마스킹한다(`김**`). 이름이 없는 고객이면 `null`이고 화면에서 "고객"으로 표시한다.
+
+**POST /public/coupons/{token}/use**: 요청 본문 없음. 성공하면 위와 같은 카드(`status: "USED"`)를 돌려준다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②). 오류: `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422), `COUPON_NOT_FOUND`(404).
 
 **POST /public/unsubscribe/{token}**
 
@@ -407,6 +441,17 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - `uniqueOpens`·`uniqueClicks` = 성공 발송 중 사람 이벤트가 있는 **고유 고객 수**, `couponUsed` = 성공 발송으로 받은 쿠폰을 사용한 고유 고객 수
 - 성공률 = sent / attempted, 오픈율·클릭률·전환율 = 고유 고객 수 / sent. 비율은 0~1, 소수 넷째 자리 반올림, 분모가 0이면 0
 - 기간은 발송 시각(`sent_at`, 실패 건은 마지막 처리 시각) 기준, 한국 시간 날짜. 오픈·클릭은 발생 시각과 관계없이 해당 발송 건에 귀속
+
+**GET /analytics/campaigns/{campaignId}/steps 응답 data**
+
+```json
+{ "campaignId": 51, "name": "가입 환영 여정", "type": "WORKFLOW",
+  "steps": [ { "stepId": 301, "nodeType": "SEND_EMAIL", "templateId": 22, "templateName": "VIP 쿠폰 메일", "couponId": 5,
+               "kpi": { "attempted": 120, "sent": 118, "successRate": 0.9833, "uniqueOpens": 40, "openRate": 0.339, "uniqueClicks": 12, "clickRate": 0.1017, "couponUsed": 6, "conversionRate": 0.0508 } } ] }
+```
+
+- `SEND_EMAIL`·`SEND_SMS` 단계만, `step_id` 순(워크플로우 저장 시 노드 순서). `kpi`는 캠페인 KPI와 같은 정의를 그 단계(`send_log.step_id`) 발송에만 적용한 값.
+- 일회성 캠페인은 `steps: []`. `templateId`가 숫자가 아니거나 템플릿이 지워졌으면 `templateId`·`templateName`은 `null`. 없는 캠페인: `COMMON_NOT_FOUND`(404).
 
 **GET /dashboard/summary?from=2026-09-25&to=2026-10-01 응답 data**
 
@@ -470,6 +515,11 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 { "drafts": [ { "subject": "...", "body": "..." }, { "subject": "...", "body": "..." }, { "subject": "...", "body": "..." } ] }
 ```
 
+- 네 항목 모두 필수(목적·타깃 200자, 톤 50자, 핵심 메시지 500자 이하). 비면 `COMMON_INVALID_INPUT`(400).
+- `body`는 HTML이 아닌 평문이고 문단은 빈 줄(`\n\n`)로 나뉜다. 템플릿 에디터에 넣을 때 화면에서 `<p>` 문단으로 바꾼다.
+- 치환자는 `{{name|고객}}`만 들어갈 수 있다. 서버가 다른 치환자·HTML 태그·`(광고)` 머리말을 지운다(광고 표기·수신거부 문구는 발송 시 자동 삽입).
+- 응답이 형식에 맞지 않거나 3안이 안 되면 `AI_UNAVAILABLE`(503). 화면은 오류 안내와 재시도 버튼을 둔다(PRD 5.3).
+
 **GET /ai/send-time-recommendations 응답 data**
 
 ```json
@@ -484,6 +534,26 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - 시간대 집계는 SQL(클릭 2 : 오픈 1 가중치, 봇 제외). LLM은 `reason` 문장만 만든다.
 - 가드레일은 코드로 적용: 시작 08:00~20:00, 시작 + 예상 소요 시간 ≤ 20:50.
 - 이벤트 100건 미만이면 `dataSufficient: false`, 기본값 평일 10:00.
+  - 응답은 `{ "dayOfWeek": "WEEKDAY", "startTime": "10:00", "score": null, ... }` 1건이다.
+- `targetCount`는 필수(0~1,000,000). `adYn`은 받지만 판정에 쓰지 않는다. 20:50 가드레일은 광고 여부와 관계없이 항상 적용한다(2026-10-01 결정).
+- `dayOfWeek`: `MON`~`SUN` 또는 `WEEKDAY`. `score`는 가장 반응이 좋은 시간대를 1.0으로 한 상대값(소수 둘째 자리). `expectedEndAt`은 분 단위 올림.
+- 집계 기준: 최근 90일, 한국 시각, 사람 이벤트(`bot_yn = N`), `kind = CAMPAIGN`. 시작 시각은 정시(HH:00)만 후보다.
+- 가드레일에 모두 걸리면(대상이 너무 많은 경우 등) `recommendations`는 빈 배열이다.
+- `reason`은 Gemini가 쓰되, 한도 초과·응답 오류여도 요청을 실패시키지 않고 서버가 만든 문장으로 대신한다(추천 자체는 SQL 결과).
+
+**POST /ai/reports/campaigns/{campaignId}** (생성·재생성, 요청 본문 없음) / **GET** (최근 요약) 응답 data
+
+```json
+{ "reportId": 7, "campaignId": 42, "content": "가을 감사 쿠폰 발송 캠페인은 ... (5문장 이내 평문)", "model": "gemini-3.1-flash-lite",
+  "input": { "campaignName": "가을 감사 쿠폰 발송", "kpi": { "attempted": 40, "sent": 38, "successRate": 0.95, "uniqueOpens": 14, "openRate": 0.3684,
+    "uniqueClicks": 5, "clickRate": 0.1316, "couponUsed": 0, "conversionRate": 0.0 } },
+  "createdAt": "2026-10-01T14:00:00+09:00" }
+```
+
+- 지표는 10장 캠페인 성과와 같은 정의다. `input`은 요약을 만든 시점의 값이며, 지표가 바뀌면 재생성한다.
+- 재생성할 때마다 `ai_report`에 새 행을 남기고, GET은 가장 최근 것을 돌려준다. 아직 요약이 없으면 `data: null`.
+- 성공 발송이 0건이면 LLM을 부르지 않고 `"model": "none"`, 안내 문장을 저장한다.
+- 없는 캠페인: `COMMON_NOT_FOUND`(404).
 
 오류: `AI_RATE_LIMITED`(429), `AI_UNAVAILABLE`(503), `AI_PII_DETECTED`(400). LLM 요청에는 고객 개인정보를 넣지 않는다. 서버가 요청 내용에서 이메일·전화번호 패턴을 발견하면 AI로 보내지 않고 `AI_PII_DETECTED`로 거절한다.
 
@@ -519,6 +589,7 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 | `COUPON_OUT_OF_PERIOD` | 422 | 유효기간 밖 |
 | `COUPON_NOT_USABLE` / `COUPON_ALREADY_USED` | 422 / 409 | 사용 불가 |
 | `COUPON_ALREADY_ISSUED` | 409 | 발급 이력이 있어 수정 제한 |
+| `COUPON_NOT_FOUND` | 404 | 없는 쿠폰·발급·고객 페이지 토큰 |
 | `UNSUBSCRIBE_INVALID_TOKEN` | 400 | 수신거부 토큰 검증 실패 |
 | `AI_RATE_LIMITED` | 429 | Gemini 한도 초과 |
 | `AI_UNAVAILABLE` | 503 | LLM 호출 실패 |
