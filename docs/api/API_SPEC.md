@@ -120,6 +120,8 @@
 - `suppression`에 있는 값은 해당 채널 동의를 N으로 저장하고 응답에 `suppressedChannels: ["EMAIL"]`를 담는다.
 - 오류: `CUSTOMER_DUPLICATE_EMAIL`(409), `CUSTOMER_INVALID_REGION`(400), `CUSTOMER_INVALID_PHONE`(400).
 
+**PATCH /customers/{id}** — 수정 화면의 값(이름·이메일·휴대폰·지역·생년월일·가입일)을 **통째로 교체**한다(빈 값은 지움). 누적구매액은 구매 등록으로만, 수신동의는 `PATCH /consent`로만 바뀐다.
+
 **PATCH /customers/{id}/consent**
 
 ```json
