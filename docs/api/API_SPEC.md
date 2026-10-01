@@ -131,6 +131,27 @@
 - suppression에 있는 값을 Y로 바꿀 때는 `evidenceNote` 필수 → suppression 삭제, `consent_history`(source=ADMIN, note) 기록.
 - 오류: `CUSTOMER_CONSENT_EVIDENCE_REQUIRED`(422).
 
+**GET /customers/{id}/activity** — 고객 상세의 발송·이벤트·쿠폰 이력
+
+```json
+// 응답 data
+{
+  "sends": [
+    { "sendLogId": 5012, "campaignId": 12, "campaignName": "10월 프로모션", "channel": "EMAIL", "kind": "CAMPAIGN",
+      "status": "SENT", "errorMessage": null, "createdAt": "2026-10-05T09:00:00+09:00", "sentAt": "2026-10-05T09:00:03+09:00",
+      "openedAt": "2026-10-05T10:12:00+09:00", "clickedAt": null }
+  ],
+  "coupons": [
+    { "issueId": 318, "couponId": 7, "couponName": "10월 재구매 쿠폰", "status": "USABLE",
+      "validFrom": "2026-10-01", "validTo": "2026-10-31", "issuedAt": "2026-10-05T09:00:03+09:00", "usedAt": null }
+  ]
+}
+```
+
+- `sends`: 최근 100건, 최신순. NOTICE도 포함(`campaignName` null). `openedAt`·`clickedAt`은 봇 제외 첫 이벤트 시각.
+- `coupons`: 발급 전체, 최신 발급순. `status`는 오늘 기준 `USABLE`·`USED`·`EXPIRED`·`NOT_STARTED`. 구매 등록 화면의 쿠폰 선택 목록은 선택한 구매일이 유효기간 안인 미사용 쿠폰이다 (`status`는 오늘 기준이라 구매일 판정에 쓰지 않는다, backend #14).
+- 삭제된 고객: `COMMON_NOT_FOUND`(404).
+
 **POST /customers/uploads** (multipart, `file`)
 
 ```json
