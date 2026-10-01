@@ -152,7 +152,7 @@
 ```
 
 - `total_purchase` 가산. `couponIssueId`는 이 고객에게 발급됐고, 미사용이며, 유효기간 안이어야 한다.
-- `amount`는 1 이상 필수. `couponIssueId`·`purchasedAt`은 선택(`purchasedAt` 생략 시 지금).
+- `amount`는 1 이상 필수. `couponIssueId`·`purchasedAt`은 선택(`purchasedAt` 생략 시 지금). `purchasedAt`이 미래면 `COMMON_INVALID_INPUT`(400).
 - 쿠폰 유효기간은 **구매일**(`purchasedAt`의 KST 날짜) 기준으로 본다.
 - 오류: `COUPON_NOT_USABLE`(422, 다른 고객 발급분·없는 발급 건·기간 밖), `COUPON_ALREADY_USED`(409).
 
