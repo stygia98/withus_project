@@ -140,7 +140,8 @@
 ```
 
 - 기존 고객 업데이트 시 누적구매액은 바꾸지 않는다. 업로드 고객은 워크플로우 트리거를 발생시키지 않는다.
-- 오류: `UPLOAD_FILE_TOO_LARGE`(400), `UPLOAD_TOO_MANY_ROWS`(400), `UPLOAD_INVALID_HEADER`(400).
+- 오류: `UPLOAD_FILE_TOO_LARGE`(400), `UPLOAD_TOO_MANY_ROWS`(400), `UPLOAD_INVALID_HEADER`(400), `UPLOAD_INVALID_FILE`(400).
+- 행별 실패 `reason` 은 12장 `CUSTOMER_INVALID_*`·`CUSTOMER_DUPLICATE_EMAIL`. `row` 는 파일에서 보이는 행 번호(헤더 = 1).
 
 **POST /customers/{id}/purchases**
 
@@ -459,7 +460,9 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 | `CUSTOMER_DUPLICATE_EMAIL` | 409 | 삭제되지 않은 고객 중 같은 이메일 존재 |
 | `CUSTOMER_INVALID_REGION` / `_PHONE` / `_DATE` | 400 | 정규화 실패 |
 | `CUSTOMER_CONSENT_EVIDENCE_REQUIRED` | 422 | 수신거부 해제에 증빙 메모 필요 |
+| `CUSTOMER_INVALID_EMAIL` / `_NAME` / `_AMOUNT` / `_CONSENT` | 400 | 업로드 행별 실패 사유 (이메일 없음·형식, 이름 50자 초과, 누적구매액 음수·형식, 수신동의 Y/N 아님). `failures[].reason` 에도 `CUSTOMER_INVALID_REGION`·`_PHONE`·`_DATE`·`CUSTOMER_DUPLICATE_EMAIL`(같은 파일 안 중복)을 쓴다 |
 | `UPLOAD_FILE_TOO_LARGE` / `_TOO_MANY_ROWS` / `_INVALID_HEADER` | 400 | 업로드 제한 |
+| `UPLOAD_INVALID_FILE` | 400 | xlsx·csv 가 아니거나 읽을 수 없는 파일 |
 | `SEGMENT_INVALID_RULE` / `_TOO_MANY_CONDITIONS` | 400 | 조건 오류 |
 | `SEGMENT_IN_USE` | 409 | 캠페인이 참조 중 |
 | `TEMPLATE_IN_USE` | 409 | 예약·활성·일시정지 캠페인이 사용 중 |
