@@ -42,7 +42,7 @@
 - [x] 로그인/로그아웃/토큰 재발급(httpOnly 쿠키), CSRF(`GET /api/v1/auth/csrf`), 로그인 5회 실패 잠금
 - [x] 최초 OWNER 계정 생성, 스케줄러 스레드 풀 설정
 - [x] Next.js 골격: rewrites(`/api/*`), 공통 fetch 래퍼, `lib/query-keys.ts`, 로그인 화면
-- [ ] 레이아웃·GNB·인증 가드 (목업: `docs/design/mockups/`)
+- [x] 레이아웃·GNB·인증 가드 (목업: `docs/design/mockups/`) (frontend #8 — 디자인 토큰, 30분 후 로그아웃 버그 수정 포함)
 - [ ] 사용자 관리 API(`/api/v1/members`)
 
 **팀원1**

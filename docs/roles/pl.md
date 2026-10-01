@@ -22,7 +22,8 @@
 - [x] 로그인/로그아웃/재발급(httpOnly 쿠키), CSRF(`GET /api/v1/auth/csrf`), 5회 실패 잠금 — 테스트 6건
 - [x] 최초 OWNER 계정, 스케줄러 풀(`spring.task.scheduling.pool.size=5`)
 - [x] Next.js 골격: rewrites, 공통 fetch 래퍼, `lib/query-keys.ts`, 로그인 화면
-- [ ] 레이아웃·GNB·인증 가드 (목업: `docs/design/mockups/`), 사용자 관리 API
+- [x] 레이아웃·GNB·인증 가드 (목업: `docs/design/mockups/`, frontend #8)
+- [ ] 사용자 관리 API
 - [ ] **M1**: DDL 적용, 로그인 동작, 인터페이스 합의, Mailpit 발송 1통
 
 ## W2
