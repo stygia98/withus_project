@@ -46,9 +46,9 @@
 - [ ] 사용자 관리 API(`/api/v1/members`)
 
 **팀원1**
-- [ ] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트
-- [ ] 수신동의 변경과 `consent_history` 기록
-- [ ] **(W1 최우선)** `SegmentService`·`ConsentService` 임시 구현(stub) 먼저 병합 — 팀원2가 기다리지 않게
+- [ ] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트 — API·정규화 완료(backend #2), 화면은 PL 레이아웃 이후
+- [x] 수신동의 변경과 `consent_history` 기록 (backend #2)
+- [ ] **(W1 최우선)** `SegmentService`·`ConsentService` 임시 구현(stub) 먼저 병합 — 팀원2가 기다리지 않게 → stub 대신 실제 구현으로 대체: `ConsentService` 완료(backend #5), `SegmentService`는 backend #3 리뷰 중
 
 **팀원2**
 - [ ] 템플릿 CRUD API·화면(최소 기능), TinyMCE 연동, `FileStorage`(로컬) 이미지 업로드
