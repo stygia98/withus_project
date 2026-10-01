@@ -419,6 +419,15 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 
 **POST /public/coupons/{token}/use**: 요청 본문 없음. 성공하면 위와 같은 카드(`status: "USED"`)를 돌려준다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②). 오류: `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422), `COUPON_NOT_FOUND`(404).
 
+**GET /public/unsubscribe/{token} 응답 data**
+
+```json
+{ "customerName": "김**", "channels": ["EMAIL", "SMS"], "unsubscribedChannels": ["SMS"] }
+```
+
+- `channels`: 고를 수 있는 채널(휴대폰이 없으면 `EMAIL`만). `unsubscribedChannels`: 이미 동의 N이거나 `suppression`에 있는 채널.
+- `customerName`은 쿠폰 페이지와 같은 마스킹, 이름이 없으면 `null`.
+
 **POST /public/unsubscribe/{token}**
 
 ```json
@@ -429,7 +438,10 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 ```
 
 - 토큰 = Base64URL(`send_log_id:customer_id:HMAC-SHA256`). 검증 실패: `UNSUBSCRIBE_INVALID_TOKEN`(400), 화면에는 "유효하지 않은 링크"만 표시.
-- 처리: 동의 N, `suppression` 추가, `consent_history`(source=UNSUBSCRIBE).
+- 처리: 동의 N, `suppression` 추가, `consent_history`(source=UNSUBSCRIBE). 같은 요청을 다시 보내도 결과는 같고 이력은 동의가 바뀔 때만 남는다.
+- `channels`는 실제 처리한 채널이다. 휴대폰이 없는 고객의 `SMS`는 빠진다.
+- 삭제된 고객의 링크도 처리한다(이메일·휴대폰 값을 `suppression`에 추가, 같은 값의 활성 고객 동의 N).
+- 원클릭(`POST /unsubscribe/one-click/{token}`)은 본문(`List-Unsubscribe=One-Click`)을 보지 않고 `EMAIL`만 처리하며, 응답은 위와 같다.
 
 ## 9. 추적·웹훅 (팀원3 · 팀원1)
 
