@@ -522,6 +522,20 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - 가드레일에 모두 걸리면(대상이 너무 많은 경우 등) `recommendations`는 빈 배열이다.
 - `reason`은 Gemini가 쓰되, 한도 초과·응답 오류여도 요청을 실패시키지 않고 서버가 만든 문장으로 대신한다(추천 자체는 SQL 결과).
 
+**POST /ai/reports/campaigns/{campaignId}** (생성·재생성, 요청 본문 없음) / **GET** (최근 요약) 응답 data
+
+```json
+{ "reportId": 7, "campaignId": 42, "content": "가을 감사 쿠폰 발송 캠페인은 ... (5문장 이내 평문)", "model": "gemini-3.1-flash-lite",
+  "input": { "campaignName": "가을 감사 쿠폰 발송", "kpi": { "attempted": 40, "sent": 38, "successRate": 0.95, "uniqueOpens": 14, "openRate": 0.3684,
+    "uniqueClicks": 5, "clickRate": 0.1316, "couponUsed": 0, "conversionRate": 0.0 } },
+  "createdAt": "2026-10-01T14:00:00+09:00" }
+```
+
+- 지표는 10장 캠페인 성과와 같은 정의다. `input`은 요약을 만든 시점의 값이며, 지표가 바뀌면 재생성한다.
+- 재생성할 때마다 `ai_report`에 새 행을 남기고, GET은 가장 최근 것을 돌려준다. 아직 요약이 없으면 `data: null`.
+- 성공 발송이 0건이면 LLM을 부르지 않고 `"model": "none"`, 안내 문장을 저장한다.
+- 없는 캠페인: `COMMON_NOT_FOUND`(404).
+
 오류: `AI_RATE_LIMITED`(429), `AI_UNAVAILABLE`(503), `AI_PII_DETECTED`(400). LLM 요청에는 고객 개인정보를 넣지 않는다. 서버가 요청 내용에서 이메일·전화번호 패턴을 발견하면 AI로 보내지 않고 `AI_PII_DETECTED`로 거절한다.
 
 ## 12. 오류 코드 목록
