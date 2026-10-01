@@ -91,8 +91,8 @@
 - [ ] W3 통합 테스트(워크플로우 + 수신거부 + 쿠폰)
 
 **팀원1**
-- [ ] 수신거부 페이지(GET 확인 / POST 처리), 원클릭 수신거부 API, `suppression` 관리·해제 절차
-- [ ] SES 반송·스팸신고 웹훅(SNS 서명 검증, Mock 요청으로 검증)
+- [x] 수신거부 페이지(GET 확인 / POST 처리), 원클릭 수신거부 API, `suppression` 관리·해제 절차 (backend #22, frontend #7, 메인 #8 — 토큰은 PL 공용 `UnsubscribeTokens`)
+- [x] SES 반송·스팸신고 웹훅(SNS 서명 검증, Mock 요청으로 검증) (backend #24, 메인 #9 — 실제 SNS 서명은 W5 배포 후 확인, `send_log` BOUNCED 반영은 팀원2 인터페이스 대기)
 - [x] 휴면 판정 배치(180일 클릭·구매 없음), 구매 등록(`purchase`, 쿠폰 사용 연계) (휴면 배치 backend #15, 구매 등록 backend #14·메인 #4)
 
 **팀원2**
