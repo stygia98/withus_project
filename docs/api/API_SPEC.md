@@ -335,6 +335,37 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 
 오류: `COUPON_INVALID_PERIOD`(400), `COUPON_RATE_CAP_REQUIRED`(400), `COUPON_ALREADY_ISSUED`(409).
 
+- 정률(`RATE`)은 `discountValue` 1~100, `maxDiscountAmount` 필수. 정액(`AMOUNT`)의 `maxDiscountAmount`는 무시하고 `null`로 저장한다.
+- `PUT /coupons/{couponId}`는 POST와 같은 본문 전체를 받는다. 발급 이력이 있으면 다른 값은 그대로 두고 `validTo`를 같거나 늦게 바꾸는 것만 허용하며, 그 외 변경은 `COUPON_ALREADY_ISSUED`(409).
+- 날짜는 `YYYY-MM-DD`, 유효기간은 시작일·종료일 당일을 포함한다(Asia/Seoul 기준).
+
+**GET /coupons 응답 data** (페이징, 최근 생성순. 상세·생성·수정 응답은 `content[0]`과 같은 형식)
+
+```json
+{ "content": [ { "couponId": 3, "name": "VIP 감사 쿠폰", "discountType": "RATE", "discountValue": 15, "maxDiscountAmount": 30000,
+    "validFrom": "2026-10-01", "validTo": "2026-10-31", "issuedCount": 120, "usedCount": 18,
+    "createdAt": "2026-09-28T10:00:00+09:00", "updatedAt": "2026-09-28T10:00:00+09:00" } ],
+  "page": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
+```
+
+**GET /coupons/{couponId}/issues 응답 data** (페이징, 최근 발급순. 토큰은 고객 페이지 접근 수단이라 넣지 않는다)
+
+```json
+{ "content": [ { "issueId": 318, "customerId": 501, "customerName": "김민지", "sendLogId": 9001,
+    "issuedAt": "2026-10-02T09:00:03+09:00", "usedAt": null, "status": "USABLE" } ],
+  "page": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
+```
+
+**GET /customers/{customerId}/coupon-issues 응답 data** (페이징 없음, 최근 발급순. `usable=true`면 미사용이고 오늘이 유효기간 안인 것만)
+
+```json
+[ { "issueId": 318, "couponId": 3, "couponName": "VIP 감사 쿠폰", "discountType": "RATE", "discountValue": 15,
+    "maxDiscountAmount": 30000, "validFrom": "2026-10-01", "validTo": "2026-10-31",
+    "issuedAt": "2026-10-02T09:00:03+09:00", "usedAt": null, "status": "USABLE" } ]
+```
+
+발급 상태 `status`는 저장하지 않고 매번 계산한다: 사용했으면 `USED`(기간보다 우선), 시작 전 `NOT_STARTED`, 종료 후 `EXPIRED`, 그 외 `USABLE`.
+
 ## 8. 고객 공개 API (팀원1·팀원3)
 
 | 메서드 | 경로 | 담당 | 설명 |
@@ -354,7 +385,10 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 { "customerName": "김민지", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USABLE" }
 ```
 
-`status`: `USABLE`, `USED`, `EXPIRED`, `NOT_STARTED`. 없는 토큰: `COUPON_NOT_FOUND`(404).
+`status`: `USABLE`, `USED`, `EXPIRED`, `NOT_STARTED`. 없는 토큰(UUID 형식이 아닌 값 포함): `COUPON_NOT_FOUND`(404).
+`customerName`은 첫 글자만 남기고 마스킹한다(`김**`). 이름이 없는 고객이면 `null`이고 화면에서 "고객"으로 표시한다.
+
+**POST /public/coupons/{token}/use**: 요청 본문 없음. 성공하면 위와 같은 카드(`status: "USED"`)를 돌려준다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②). 오류: `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422), `COUPON_NOT_FOUND`(404).
 
 **POST /public/unsubscribe/{token}**
 
@@ -511,6 +545,7 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 | `COUPON_OUT_OF_PERIOD` | 422 | 유효기간 밖 |
 | `COUPON_NOT_USABLE` / `COUPON_ALREADY_USED` | 422 / 409 | 사용 불가 |
 | `COUPON_ALREADY_ISSUED` | 409 | 발급 이력이 있어 수정 제한 |
+| `COUPON_NOT_FOUND` | 404 | 없는 쿠폰·발급·고객 페이지 토큰 |
 | `UNSUBSCRIBE_INVALID_TOKEN` | 400 | 수신거부 토큰 검증 실패 |
 | `AI_RATE_LIMITED` | 429 | Gemini 한도 초과 |
 | `AI_UNAVAILABLE` | 503 | LLM 호출 실패 |
