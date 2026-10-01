@@ -248,6 +248,7 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | React | 19.x | 19.1.0 |
 | Tailwind CSS | 4.x | 4.3.3 |
 | TanStack Query | 5.x | 5.104.0 |
+| Recharts (shadcn Chart) | 3.x | 3.8.0 (팀원3 대시보드, `components/ui/chart.tsx`는 `dangerouslySetInnerHTML` 제거본) |
 | TinyMCE | 최신 (자체 설치, GPLv2+) | 설치 시 기록 (팀원2), `license_key: 'gpl'` |
 | Lombok | Spring Boot BOM 관리 버전 | BOM 관리 (허용 어노테이션은 `lombok.config`로 강제) |
 | react-hook-form / zod / @hookform/resolvers | 최신 안정판 | 7.89.0 / 4.6.5 / 5.9.1 |

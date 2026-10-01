@@ -46,7 +46,7 @@
 - [ ] 사용자 관리 API(`/api/v1/members`)
 
 **팀원1**
-- [ ] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트 — API·정규화 완료(backend #2), 화면은 PL 레이아웃 이후
+- [x] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트 (backend #2, frontend #1 — 레이아웃은 PL 작업 후 자동 적용)
 - [x] 수신동의 변경과 `consent_history` 기록 (backend #2)
 - [x] **(W1 최우선)** `SegmentService`·`ConsentService` 임시 구현(stub) 먼저 병합 — 팀원2가 기다리지 않게 → stub 대신 실제 구현으로 대체: `ConsentService`(backend #5), `SegmentService` 1차(backend #3)
 
@@ -56,8 +56,8 @@
 - [x] **발송 큐 설계 Plan 작성 → PL 리뷰** (W2 착수 전 승인) — 승인 완료(backend #4, 승인 결과 #6)
 
 **팀원3**
-- [ ] 추적 API(`/t/o/{trackingToken}.gif`, `/t/c/{trackingToken}/{linkId}`), 비동기 이벤트 저장
-- [ ] Gemini 클라이언트(개인정보 미전송, 한도 초과 처리), 무료 등급 모델명·한도 확인
+- [x] 추적 API(`/t/o/{trackingToken}.gif`, `/t/c/{trackingToken}/{linkId}`), 비동기 이벤트 저장 (backend #12)
+- [x] Gemini 클라이언트(개인정보 미전송, 한도 초과 처리), 무료 등급 모델명·한도 확인 (backend #12, 메인 #3)
 - [x] **(W1 최우선)** `TrackingLinkService`·`CouponService`·`TrackEventRepository`·`PlaceholderRenderer` stub 먼저 병합 (backend #10)
 
 ### W2 — 일회성 발송 끝까지 연결
@@ -78,9 +78,9 @@
 - [ ] 발송 시 렌더링: (광고)·발신자·수신거부 삽입, `PlaceholderRenderer`·`TrackingLinkService.rewrite` 연결
 
 **팀원3**
-- [ ] 치환자 렌더러 `PlaceholderRenderer`(`{{name|고객}}` 기본값, 시스템 기본값, 미리보기용 기본값 적용 수) + 단위 테스트 — 팀원2에서 이관
-- [ ] 봇 판정(10초, User-Agent 키워드, 1초 내 전체 클릭)
-- [ ] 메인 대시보드(카드, 활성 캠페인, 10초 폴링 이벤트 로그), 캠페인 성과 차트
+- [x] 치환자 렌더러 `PlaceholderRenderer`(`{{name|고객}}` 기본값, 시스템 기본값, 미리보기용 기본값 적용 수) + 단위 테스트 — 팀원2에서 이관 (backend #12, HTML 본문용 `renderHtml` 포함)
+- [x] 봇 판정(10초, User-Agent 키워드, 1초 내 전체 클릭) (backend #12)
+- [x] 메인 대시보드(카드, 활성 캠페인, 10초 폴링 이벤트 로그), 캠페인 성과 차트 (backend #12, frontend #3 — 활성 캠페인 카드는 팀원2 `GET /campaigns` 대기)
 
 ### W3 — 워크플로우·수신거부·쿠폰
 
