@@ -1,6 +1,6 @@
 # Plan — 세그먼트 규칙 JSON → 동적 SQL (팀원1, W2)
 
-> 상태: **PL 승인 요청 (초안)** · 작성: 팀원1 · 2026-10-01
+> 상태: **PL 승인 완료** (메인 저장소 PR #1) · 작성: 팀원1 · 2026-10-01 — 구현 전 맨 아래 "10. PL 승인 결과"를 먼저 읽는다
 > 근거: PRD F-03·F-11·3장(권한)·6.2(트리거)·9장(성능)·10.3, `DB_SCHEMA.md` 5.1, `API_SPEC.md` 4장, CLAUDE.md 0·4·9장
 > CLAUDE.md 0장에 따라 세그먼트 동적 쿼리는 코드보다 Plan을 먼저 승인받는다. 승인 전에는 코드를 쓰지 않는다.
 
@@ -138,3 +138,27 @@ segment/mapper/SegmentMapper + resources/mapper/segment/SegmentMapper.xml
 | Q4 | 미리보기 `emailConsent`·`smsConsent` 수에서 suppression 대상을 뺄까? | **빼지 않음** (동의 컬럼 기준, suppression 대상은 등록 때 이미 N). 실제 발송 가능 여부는 발송 직전 `ConsentService`가 판정 |
 | Q5 | `CUSTOMER_REGISTERED` 트리거(PRD 6.2)는 "개별 등록 고객이 세그먼트 조건에 맞는지" 한 명만 판정해야 한다. 동결된 인터페이스에는 `findTargetCustomers`뿐이다 | 팀원2가 `findTargetCustomers(...).contains(id)`로 판정(추가 작업 없음, 10만 명에서도 1회 수십 ms). 부족하면 `matches(segmentId, customerId)` 추가를 PL 리뷰로 |
 | Q6 | 제출·승인 방식 | 이 문서를 메인 저장소 PR로 올리고, PR 승인 = Plan 승인으로 본다 |
+
+## 10. PL 승인 결과
+
+Plan을 승인한다 (메인 저장소 PR #1). 화이트리스트·`#{}` 바인딩·`deleted_yn` 고정·순수 Java 변환 테스트 분리·1차/2차 병합 순서 모두 그대로 진행한다.
+
+**구현할 때 반영할 것**
+
+| # | 내용 | 이유 |
+|---|---|---|
+| R1 | 그룹·조건 **연결어(AND/OR)도** `SegmentOperator`처럼 enum으로 받아 XML `<choose>`의 고정 문자열로만 넣는다. `${operator}`로 넣지 않는다 | 5장 SQL의 "연결어는 rule의 AND/OR"가 사용자 입력이라, 그대로 넣으면 그 자리가 인젝션 지점이 된다 |
+| R2 | 10만 명 성능 측정(5장)은 **트랜잭션 안에서 넣고 롤백**하거나 별도 스키마에서 한다 | 로컬 시드 데이터(`R__seed_local.sql`)와 섞이지 않게 |
+
+**9장 질문 답변 — 모두 제안안대로 확정**
+
+| # | 결정 |
+|---|---|
+| Q1 | `region NE`는 지역이 NULL인 고객을 **포함하지 않는다** (SQL 기본 동작) |
+| Q2 | `joinedAt IN_LAST_DAYS N`은 **오늘 포함 N일**: `joined_at > today - N` |
+| Q3 | 조건 0개 규칙은 **허용하지 않는다** (`SEGMENT_INVALID_RULE`) |
+| Q4 | 미리보기 동의 수에서 suppression을 **빼지 않는다**. 최종 발송 가능 여부는 발송 직전 `ConsentService`가 판정 |
+| Q5 | `CUSTOMER_REGISTERED` 단건 판정은 팀원2가 `findTargetCustomers(...).contains(id)`로 시작한다. 부족하면 `matches(segmentId, customerId)` 추가를 PL 리뷰로 |
+| Q6 | Plan은 `docs/plans/`에 문서로 올리고 **PR 승인 = Plan 승인**으로 한다 (`docs/workflow-git.md`) |
+
+**참고:** 로컬 시드(`feature/seed-data`, PL)의 세그먼트 "서울·경기 구매 10만 원 이상"은 대상이 35명이다. 7장의 PRD 10.3 시나리오 확인에 그대로 쓸 수 있다.

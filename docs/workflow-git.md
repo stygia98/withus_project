@@ -69,3 +69,9 @@ cd infra && docker compose up -d
 - 팀 분배·진행 기준은 `docs/roadmap.md` 체크박스다. roadmap은 메인 저장소에 있어 코드 PR에 함께 넣을 수 없으므로, **PR 설명에 해당 roadmap 항목을 적고 체크는 PL이 병합할 때 한다.**
 - 세부 작업 분해는 각자 Shrimp를 쓴다. Shrimp 데이터는 커밋하지 않는다.
 - 발송 큐·워크플로우 엔진·인증·세그먼트 SQL은 코드 전에 Plan을 제시하고 PL 승인을 받는다.
+
+## Plan 승인 절차
+1. 메인 저장소에서 `feature/{주제}-plan` 브랜치를 만들고 `docs/plans/{주제}.md`에 Plan을 쓴다 (예: `docs/plans/segment-sql.md`). 근거 PRD 섹션, 처리 흐름, 테스트, 병합 순서, **PL에게 확인할 질문**을 담는다.
+2. `dev`로 PR을 올린다. **PR 승인 = Plan 승인**이다. 승인 전에는 해당 코드를 쓰지 않는다.
+3. PL은 승인하면서 반영 사항·질문 답변을 Plan 문서 맨 아래 **"PL 승인 결과"** 절에 남긴다 (PR 코멘트만으로 끝내지 않는다 — 문서에 남아야 구현할 때 다시 볼 수 있다).
+4. 구현 PR 설명에는 해당 Plan 문서를 적는다.
