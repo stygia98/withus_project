@@ -68,8 +68,8 @@
 - [ ] 일회성 발송 E2E 통합 테스트
 
 **팀원1**
-- [ ] CSV/xlsx 업로드(10,000행, 500행 배치 insert, 행별 결과, `suppression` 반영)
-- [ ] 세그먼트 조건 빌더: 규칙 JSON → MyBatis 동적 SQL(화이트리스트), 대상 수 미리보기 + 단위 테스트 — 백엔드 완료(backend #3·#8, 10만 명 미리보기 최대 37ms), 빌더 화면은 PL 레이아웃 이후
+- [x] CSV/xlsx 업로드(10,000행, 500행 배치 insert, 행별 결과, `suppression` 반영) (backend #9, frontend #2 — 1만 행 2.3초)
+- [x] 세그먼트 조건 빌더: 규칙 JSON → MyBatis 동적 SQL(화이트리스트), 대상 수 미리보기 + 단위 테스트 (backend #3·#8, frontend #2 — 10만 명 미리보기 최대 37ms)
 
 **팀원2**
 - [ ] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함)
@@ -96,13 +96,14 @@
 - [x] 휴면 판정 배치(180일 클릭·구매 없음), 구매 등록(`purchase`, 쿠폰 사용 연계) (휴면 배치 backend #15, 구매 등록 backend #14·메인 #4)
 
 **팀원2**
+- [x] 워크플로우 엔진 설계 Plan → PL 승인 (backend #20, 승인 결과는 `docs/plans/workflow-plan.md` 11장)
 - [ ] 워크플로우 빌더(폼 기반) + 구조 검증(분기 2단계, 노드 15개, 순환 금지, SEND 노드별 쿠폰)
 - [ ] 워크플로우 엔진: 500건 반복 처리, WAIT(`sent_at` 기준), CONDITION(봇 제외), 멈춤 복구, 멱등성
 - [ ] 캠페인 상태 전이(DRAFT/SCHEDULED/ACTIVE/PAUSED/COMPLETED), 일시정지 시 PENDING 보류
 
 **팀원3**
-- [ ] 쿠폰 CRUD(정액·정률·상한, 고정 기간), 발급(`CouponService.issue`), `{{couponUrl}}` 연동
-- [ ] 고객 쿠폰 페이지 `/c/[token]`(카드형, POST 사용 처리, 모바일 대응), 전환 집계
+- [x] 쿠폰 CRUD(정액·정률·상한, 고정 기간), 발급(`CouponService.issue`), `{{couponUrl}}` 연동 (backend #16, frontend #4 — 발급 멱등·원자적 사용 처리)
+- [x] 고객 쿠폰 페이지 `/c/[token]`(카드형, POST 사용 처리, 모바일 대응), 전환 집계 (backend #16, frontend #4)
 - [ ] 봇 판정 User-Agent 목록을 실제 메일로 검증·보강
 
 ### W4 — AI·통합·기능 동결
@@ -122,8 +123,8 @@
 - [ ] (선택) A/B 테스트, React Flow 캔버스
 
 **팀원3**
-- [ ] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장)
-- [ ] 성과 리포트 마무리(단계별 차트, 전환율, A/B 비교)
+- [x] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장) (backend #16, frontend #4 — W4 항목 선행 완료)
+- [ ] 성과 리포트 마무리(단계별 차트, 전환율, A/B 비교) — 단계별·전환율 완료(backend #16, frontend #4), A/B 비교는 A/B 기능 결정 후
 - [ ] 여유 시 팀원2 워크플로우 안정화 지원(부하 데이터 생성, CONDITION 조회 검증)
 
 ### W5 — 운영 배포와 시연
