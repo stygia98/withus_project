@@ -442,6 +442,9 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - 이벤트 저장은 비동기. 없는 토큰은 응답은 정상, 저장만 하지 않는다.
 - 봇 판정(발송 후 10초 이내, 스캐너 User-Agent, 1초 안 전체 링크 클릭)은 저장 시 `bot_yn`으로 기록한다.
 - SES 웹훅: `SubscriptionConfirmation` 처리, `Bounce(Permanent)`·`Complaint` → `provider_message_id`로 send_log 조회 → BOUNCED, suppression 추가, 동의 N.
+  - 검증: `TopicArn` = 설정 `ses.topic-arn`(환경변수 `SES_TOPIC_ARN`, 비어 있으면 모두 무시), `SigningCertURL`·`SubscribeURL`은 `https://sns.<region>.amazonaws.com`만, 서명은 `SignatureVersion` 1(SHA1)·2(SHA256). 실패는 로그만 남기고 200.
+  - suppression·동의 N은 알림의 수신자 주소(`bouncedRecipients`·`complainedRecipients`) 기준이다. 고객이 없는 주소도 목록에 남는다. 일시 반송(Transient)은 무시.
+  - `send_log` BOUNCED 반영은 팀원2 인터페이스가 생기면 연결한다(send_log 쓰기는 소유 도메인만).
 
 ## 10. 대시보드·성과 리포트 (팀원3 · `tracking`)
 
