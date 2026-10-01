@@ -145,7 +145,7 @@ resources/db/migration/V{n}__{설명}.sql
 |---|---|
 | `spring.profiles.active` | `local` (W1~W4), `prod` (W5) |
 | `spring.task.scheduling.pool.size` | `5` |
-| `ses.max-send-rate` | 승인 전 `1`, 승인 후 부여 한도의 80% |
+| `ses.max-send-rate` | `1` 유지 (SES 샌드박스 한도, 도메인 미구매 — PRD 10.4) |
 | `withus.sender.name` / `withus.sender.phone` | 시연용 `위드어스` / `02-000-0000` |
 | `withus.sender.unsubscribe-phone` | 시연용 `080-000-0000` |
 | `withus.tracking.bot-click-seconds` | `10` |

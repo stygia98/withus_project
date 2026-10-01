@@ -33,8 +33,19 @@ cd infra && docker compose up -d
 
 ## 팀장(PL)
 - PR은 CLAUDE.md 6·9장 위반(큐 우회, GET 상태변경, 시크릿, 기존 Flyway 수정, 번호 대역 충돌)을 중점 확인 후 dev에 병합
-- dev → main 은 마일스톤 시점에만
-- `main`·`dev` 브랜치 보호(직접 push 금지, PR 필수) 설정
+- dev → main 은 마일스톤(M1~M5) 시점에만
+- `main`·`dev` 브랜치 보호(PR 필수·승인 1, 관리자 우회 허용) 설정
+
+**PL 자신의 작업**
+| 대상 | 방식 |
+|---|---|
+| backend·frontend 코드 | 팀원과 같이 `feature/...` 브랜치 → `dev`로 PR. 자기 PR은 승인할 수 없으므로 팀원에게 리뷰를 받거나(공통 모듈은 권장) 관리자 우회로 병합 |
+| 메인 저장소 문서 (CLAUDE.md, roadmap 체크 등) | `dev`에 직접 push. 규칙이 바뀌면 팀에 공지 |
+| `main` | 마일스톤 때만 `dev` → `main` |
+
+**팀원이 받아야 할 변경**
+- 코드: 작업 루틴 3번대로 자기 feature 브랜치에서 하루 1회 `git pull origin dev`. 마이그레이션이 추가됐으면 백엔드 재기동만 하면 Flyway가 적용한다.
+- 문서: `withus` 폴더(메인 저장소, `dev` 그대로 사용)에서 가끔 `git pull`. PL이 규칙 변경을 공지하면 바로 받는다.
 
 ## 충돌 예방
 - Flyway 번호 대역: PL `V1(동결)~V9`, 팀원1 `V10~V19`, 팀원2 `V20~V29`, 팀원3 `V30~V39` (부족하면 PL과 협의). 같은 번호가 생기면 기동이 실패한다.
