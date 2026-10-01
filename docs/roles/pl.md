@@ -23,7 +23,7 @@
 - [x] 최초 OWNER 계정, 스케줄러 풀(`spring.task.scheduling.pool.size=5`)
 - [x] Next.js 골격: rewrites, 공통 fetch 래퍼, `lib/query-keys.ts`, 로그인 화면
 - [x] 레이아웃·GNB·인증 가드 (목업: `docs/design/mockups/`, frontend #8)
-- [ ] 사용자 관리 API
+- [x] 사용자 관리 API·화면 (backend #26, frontend #9)
 - [ ] **M1**: DDL 적용, 로그인 동작, 인터페이스 합의, Mailpit 발송 1통
 
 ## W2

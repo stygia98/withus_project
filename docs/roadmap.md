@@ -43,7 +43,7 @@
 - [x] 최초 OWNER 계정 생성, 스케줄러 스레드 풀 설정
 - [x] Next.js 골격: rewrites(`/api/*`), 공통 fetch 래퍼, `lib/query-keys.ts`, 로그인 화면
 - [x] 레이아웃·GNB·인증 가드 (목업: `docs/design/mockups/`) (frontend #8 — 디자인 토큰, 30분 후 로그아웃 버그 수정 포함)
-- [ ] 사용자 관리 API(`/api/v1/members`)
+- [x] 사용자 관리 API(`/api/v1/members`)·화면(`/settings/users`) (backend #26, frontend #9)
 
 **팀원1**
 - [x] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트 (backend #2, frontend #1 — 레이아웃은 PL 작업 후 자동 적용)
