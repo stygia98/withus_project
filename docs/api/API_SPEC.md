@@ -72,7 +72,7 @@
 | POST | `/api/v1/auth/refresh` | 공개(쿠키) | Access 재발급, Refresh 교체 |
 | POST | `/api/v1/auth/logout` | 로그인 | Refresh 무효화, 쿠키 만료 |
 | GET | `/api/v1/auth/me` | 로그인 | 내 정보 |
-| GET | `/api/v1/members` | O | 사용자 목록 (미구현, PL) |
+| GET | `/api/v1/members` | O | 사용자 목록 |
 | POST | `/api/v1/members` | O | 사용자 생성 |
 | PATCH | `/api/v1/members/{memberId}` | O | 역할·활성 여부 변경 |
 
@@ -86,6 +86,21 @@
 ```
 
 오류: `AUTH_INVALID_CREDENTIALS`(401), `AUTH_ACCOUNT_LOCKED`(401, `error.details.lockedUntil` 포함, 5회 실패 시 5분), `AUTH_ACCOUNT_INACTIVE`(401).
+
+**사용자 관리 (`/members`, OWNER 전용)**
+
+```json
+// GET 응답 data (member_id 순, 사용자 수가 적어 페이징 없음). POST·PATCH 응답 data 는 이 형식 1건
+[ { "memberId": 2, "email": "manager@withus.kr", "name": "김마케팅", "role": "MANAGER", "active": true } ]
+// POST 요청 — 초기 비밀번호는 OWNER 가 정해 전달한다(8~72자). 이메일은 소문자·trim 으로 저장
+{ "email": "staff@withus.kr", "name": "박직원", "role": "STAFF", "password": "********" }
+// PATCH 요청 — 보내지 않은 값은 그대로
+{ "role": "MANAGER", "active": false }
+```
+
+- 자기 계정의 역할·활성 여부는 바꿀 수 없다(`MEMBER_SELF_CHANGE`). 이 API 는 활성 OWNER 만 부르므로 마지막 OWNER 가 사라지는 경우도 생기지 않는다.
+- 역할·활성 여부를 바꾸면 그 사용자의 Refresh 토큰을 지운다. 이미 받은 Access 토큰은 만료(30분)까지 유효하므로 **늦어도 30분 안에** 새 역할·비활성이 반영된다.
+- 오류: `MEMBER_DUPLICATE_EMAIL`(409), `MEMBER_SELF_CHANGE`(400), 없는 사용자 `COMMON_NOT_FOUND`(404).
 
 ## 3. 고객 (팀원1 · `customer`)
 
@@ -605,6 +620,8 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 | `AUTH_INVALID_CREDENTIALS` | 401 | 이메일·비밀번호 불일치 |
 | `AUTH_ACCOUNT_LOCKED` | 401 | 5회 실패로 잠금 |
 | `AUTH_ACCOUNT_INACTIVE` | 401 | 비활성 계정 |
+| `MEMBER_DUPLICATE_EMAIL` | 409 | 이미 등록된 사용자 이메일 |
+| `MEMBER_SELF_CHANGE` | 400 | 자기 계정의 역할·활성 여부 변경 시도 |
 | `AUTH_FORBIDDEN` | 403 | 권한 없음 |
 | `AUTH_CSRF_INVALID` | 403 | CSRF 토큰 없음·불일치 |
 | `CUSTOMER_DUPLICATE_EMAIL` | 409 | 삭제되지 않은 고객 중 같은 이메일 존재 |
