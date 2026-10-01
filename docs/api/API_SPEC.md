@@ -422,8 +422,8 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 | GET | `/api/v1/dashboard/daily-sends` | O M S | 일별 발송 건수 (`days`, 기본 14) |
 | GET | `/api/v1/dashboard/queue` | O M S | 발송 큐 상태 |
 | GET | `/api/v1/dashboard/events` | O M S | 최근 이벤트 (`after` 이벤트 ID, 10초 폴링) |
-| GET | `/api/v1/analytics/campaigns/{campaignId}` | O M S | 캠페인 KPI·전환 흐름 |
-| GET | `/api/v1/analytics/campaigns/{campaignId}/steps` | O M S | 워크플로우 단계별 집계 |
+| GET | `/api/v1/analytics/campaigns/{campaignId}` | O M S | 캠페인 KPI·전환 흐름 (`from`, `to` 선택) |
+| GET | `/api/v1/analytics/campaigns/{campaignId}/steps` | O M S | 워크플로우 단계별 집계 (`from`, `to` 선택) |
 | GET | `/api/v1/analytics/campaigns/{campaignId}/ab-test` | O M S | A/B 비교 |
 
 모든 지표는 `bot_yn = 'N'`, `kind = 'CAMPAIGN'`만 집계한다.
@@ -434,10 +434,12 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - 성공률 = sent / attempted, 오픈율·클릭률·전환율 = 고유 고객 수 / sent. 비율은 0~1, 소수 넷째 자리 반올림, 분모가 0이면 0
 - 기간은 발송 시각(`sent_at`, 실패 건은 마지막 처리 시각) 기준, 한국 시간 날짜. 오픈·클릭은 발생 시각과 관계없이 해당 발송 건에 귀속
 
+**캠페인 성과 기간 필터 (PRD F-09)** — `/analytics/campaigns/{id}`와 `/steps`는 `from`·`to`(`YYYY-MM-DD`, 발송일 기준 한국 날짜, 양 끝 포함)를 각각 생략할 수 있다. 생략한 쪽은 제한이 없고, 둘 다 없으면 캠페인 전체 기간이다. 응답에 요청한 `from`·`to`를 그대로 넣는다(없으면 `null`). `from > to`면 `COMMON_INVALID_INPUT`(400). AI-03 요약은 항상 전체 기간이다.
+
 **GET /analytics/campaigns/{campaignId}/steps 응답 data**
 
 ```json
-{ "campaignId": 51, "name": "가입 환영 여정", "type": "WORKFLOW",
+{ "campaignId": 51, "name": "가입 환영 여정", "type": "WORKFLOW", "from": null, "to": null,
   "steps": [ { "stepId": 301, "nodeType": "SEND_EMAIL", "templateId": 22, "templateName": "VIP 쿠폰 메일", "couponId": 5,
                "kpi": { "attempted": 120, "sent": 118, "successRate": 0.9833, "uniqueOpens": 40, "openRate": 0.339, "uniqueClicks": 12, "clickRate": 0.1017, "couponUsed": 6, "conversionRate": 0.0508 } } ] }
 ```
@@ -483,7 +485,7 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 
 ```json
 {
-  "campaignId": 42, "name": "가을 감사 쿠폰 발송",
+  "campaignId": 42, "name": "가을 감사 쿠폰 발송", "from": null, "to": null,
   "kpi": { "attempted": 10000, "sent": 9812, "successRate": 0.981, "uniqueOpens": 3061, "openRate": 0.312, "uniqueClicks": 667, "clickRate": 0.068, "couponUsed": 204, "conversionRate": 0.021 },
   "funnel": [ { "stage": "ATTEMPTED", "count": 10000 }, { "stage": "SENT", "count": 9812 }, { "stage": "OPENED", "count": 3061 }, { "stage": "CLICKED", "count": 667 }, { "stage": "CONVERTED", "count": 204 } ]
 }
