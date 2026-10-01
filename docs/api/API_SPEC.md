@@ -496,6 +496,11 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 { "drafts": [ { "subject": "...", "body": "..." }, { "subject": "...", "body": "..." }, { "subject": "...", "body": "..." } ] }
 ```
 
+- 네 항목 모두 필수(목적·타깃 200자, 톤 50자, 핵심 메시지 500자 이하). 비면 `COMMON_INVALID_INPUT`(400).
+- `body`는 HTML이 아닌 평문이고 문단은 빈 줄(`\n\n`)로 나뉜다. 템플릿 에디터에 넣을 때 화면에서 `<p>` 문단으로 바꾼다.
+- 치환자는 `{{name|고객}}`만 들어갈 수 있다. 서버가 다른 치환자·HTML 태그·`(광고)` 머리말을 지운다(광고 표기·수신거부 문구는 발송 시 자동 삽입).
+- 응답이 형식에 맞지 않거나 3안이 안 되면 `AI_UNAVAILABLE`(503). 화면은 오류 안내와 재시도 버튼을 둔다(PRD 5.3).
+
 **GET /ai/send-time-recommendations 응답 data**
 
 ```json
