@@ -252,7 +252,7 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | react-hook-form / zod / @hookform/resolvers | 최신 안정판 | 7.89.0 / 4.6.5 / 5.9.1 |
 | Prettier | 최신 안정판 | 3.9.9 (`.prettierrc`: printWidth 100, `*.md` 제외) |
 | shadcn/ui 기반 | CLI 기본값 | `@base-ui/react`(프리미티브), `cn`(shadcn 공식 클래스 병합 유틸) |
-| Gemini 모델 | 무료 등급의 가장 가벼운 텍스트 모델 | `gemini-3.1-flash-lite` (2026-10-01 실제 호출로 확인: `models/gemini-3.1-flash-lite:generateContent` HTTP 200, 응답 `modelVersion` 일치). 가격 문서상 무료 등급은 "Free of charge"이며 **무료 등급 입력은 Google 제품 개선에 쓰임**(그래서 개인정보 미전송). 인증은 `x-goog-api-key` 헤더. 일일 한도는 태평양 시간 자정에 초기화되고 프로젝트 단위로 적용(공식 rate-limits 문서). **분당·일일 호출 한도(RPM/TPM/RPD) 수치는 공식 문서에 없고 AI Studio 대시보드(https://aistudio.google.com/rate-limit)에서만 보이므로 미확인 — 확인 후 이 행에 추가** |
+| Gemini 모델 | 무료 등급의 가장 가벼운 텍스트 모델 | `gemini-3.1-flash-lite` (2026-10-01 실제 호출로 확인: `models/gemini-3.1-flash-lite:generateContent` HTTP 200, 응답 `modelVersion` 일치). 가격 문서상 무료 등급은 "Free of charge"이며 **무료 등급 입력은 Google 제품 개선에 쓰임**(그래서 개인정보 미전송). 인증은 `x-goog-api-key` 헤더. 일일 한도는 태평양 시간 자정에 초기화되고 프로젝트 단위로 적용(공식 rate-limits 문서). **무료 등급 한도(2026-10-01 AI Studio 비율 제한 화면에서 확인, 프로젝트 `withus-dev`): RPM 15, TPM 250K(분당 입력 토큰), RPD 500.** 공식 문서에 수치가 없어 대시보드 값을 기준으로 하며, Google은 한도가 보장되는 값이 아니라고 밝힘(실제 용량은 달라질 수 있음). 시연 전날 대시보드에서 다시 확인 |
 
 ## 6. 결정 사항
 
@@ -264,7 +264,7 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | TinyMCE 라이선스 | **TinyMCE 자체 설치, GPLv2+** (`license_key: 'gpl'`) | 저장소가 공개(GitHub public)라 GPL 소스 공개 의무 충족. Tiptap 대체 불필요 |
 | SES API | **`sesv2`** | List-Unsubscribe 헤더를 포함한 원시 메시지 전송 (W2, 팀원2) |
 | SNS 서명 검증 | **AWS SDK 제공 기능 우선**, 없으면 직접 구현 | W3, 팀원1 |
-| Gemini 모델 | **무료 등급의 가장 가벼운 텍스트 모델** | 모델명 `gemini-3.1-flash-lite` 확인·5장 기록 완료. 호출 한도 수치는 AI Studio 확인 후 5장에 추가 (팀원3) |
+| Gemini 모델 | **무료 등급의 가장 가벼운 텍스트 모델** | 모델명 `gemini-3.1-flash-lite`와 무료 등급 한도(RPM 15·TPM 250K·RPD 500) 확인, 5장에 기록 완료 (팀원3, 2026-10-01) |
 | 자동 포맷터 | **프론트 Prettier만** | `.prettierrc`(printWidth 100), `npm run format` / `format:check`, ESLint와 충돌 방지(`eslint-config-prettier`). 백엔드는 IntelliJ 기본 |
 | 로컬 DB 비밀번호 | **`infra/.env`에서 읽음** (파일에 직접 쓰지 않음) | CLAUDE.md 7장 "비밀값은 환경변수로만"과 일치. `.env.example` 복사 후 사용 |
 
