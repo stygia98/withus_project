@@ -434,6 +434,17 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - 성공률 = sent / attempted, 오픈율·클릭률·전환율 = 고유 고객 수 / sent. 비율은 0~1, 소수 넷째 자리 반올림, 분모가 0이면 0
 - 기간은 발송 시각(`sent_at`, 실패 건은 마지막 처리 시각) 기준, 한국 시간 날짜. 오픈·클릭은 발생 시각과 관계없이 해당 발송 건에 귀속
 
+**GET /analytics/campaigns/{campaignId}/steps 응답 data**
+
+```json
+{ "campaignId": 51, "name": "가입 환영 여정", "type": "WORKFLOW",
+  "steps": [ { "stepId": 301, "nodeType": "SEND_EMAIL", "templateId": 22, "templateName": "VIP 쿠폰 메일", "couponId": 5,
+               "kpi": { "attempted": 120, "sent": 118, "successRate": 0.9833, "uniqueOpens": 40, "openRate": 0.339, "uniqueClicks": 12, "clickRate": 0.1017, "couponUsed": 6, "conversionRate": 0.0508 } } ] }
+```
+
+- `SEND_EMAIL`·`SEND_SMS` 단계만, `step_id` 순(워크플로우 저장 시 노드 순서). `kpi`는 캠페인 KPI와 같은 정의를 그 단계(`send_log.step_id`) 발송에만 적용한 값.
+- 일회성 캠페인은 `steps: []`. `templateId`가 숫자가 아니거나 템플릿이 지워졌으면 `templateId`·`templateName`은 `null`. 없는 캠페인: `COMMON_NOT_FOUND`(404).
+
 **GET /dashboard/summary?from=2026-09-25&to=2026-10-01 응답 data**
 
 `from`·`to`는 `YYYY-MM-DD`, 양 끝 포함, 최대 366일. 생략하면 오늘 포함 최근 7일. 오류: `COMMON_INVALID_INPUT`(400)
