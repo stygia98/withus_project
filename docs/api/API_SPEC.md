@@ -515,6 +515,12 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - 시간대 집계는 SQL(클릭 2 : 오픈 1 가중치, 봇 제외). LLM은 `reason` 문장만 만든다.
 - 가드레일은 코드로 적용: 시작 08:00~20:00, 시작 + 예상 소요 시간 ≤ 20:50.
 - 이벤트 100건 미만이면 `dataSufficient: false`, 기본값 평일 10:00.
+  - 응답은 `{ "dayOfWeek": "WEEKDAY", "startTime": "10:00", "score": null, ... }` 1건이다.
+- `targetCount`는 필수(0~1,000,000). `adYn`은 받지만 판정에 쓰지 않는다. 20:50 가드레일은 광고 여부와 관계없이 항상 적용한다(2026-10-01 결정).
+- `dayOfWeek`: `MON`~`SUN` 또는 `WEEKDAY`. `score`는 가장 반응이 좋은 시간대를 1.0으로 한 상대값(소수 둘째 자리). `expectedEndAt`은 분 단위 올림.
+- 집계 기준: 최근 90일, 한국 시각, 사람 이벤트(`bot_yn = N`), `kind = CAMPAIGN`. 시작 시각은 정시(HH:00)만 후보다.
+- 가드레일에 모두 걸리면(대상이 너무 많은 경우 등) `recommendations`는 빈 배열이다.
+- `reason`은 Gemini가 쓰되, 한도 초과·응답 오류여도 요청을 실패시키지 않고 서버가 만든 문장으로 대신한다(추천 자체는 SQL 결과).
 
 오류: `AI_RATE_LIMITED`(429), `AI_UNAVAILABLE`(503), `AI_PII_DETECTED`(400). LLM 요청에는 고객 개인정보를 넣지 않는다. 서버가 요청 내용에서 이메일·전화번호 패턴을 발견하면 AI로 보내지 않고 `AI_PII_DETECTED`로 거절한다.
 
