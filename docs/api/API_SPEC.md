@@ -391,11 +391,45 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 
 모든 지표는 `bot_yn = 'N'`, `kind = 'CAMPAIGN'`만 집계한다.
 
+**지표 정의 (PRD F-09)**
+- 발송 시도 `attempted` = `SENT` + `BOUNCED` + `FAILED` (`SKIPPED`·`PENDING`·`SENDING`은 제외), 발송 성공 `sent` = `SENT`
+- `uniqueOpens`·`uniqueClicks` = 성공 발송 중 사람 이벤트가 있는 **고유 고객 수**, `couponUsed` = 성공 발송으로 받은 쿠폰을 사용한 고유 고객 수
+- 성공률 = sent / attempted, 오픈율·클릭률·전환율 = 고유 고객 수 / sent. 비율은 0~1, 소수 넷째 자리 반올림, 분모가 0이면 0
+- 기간은 발송 시각(`sent_at`, 실패 건은 마지막 처리 시각) 기준, 한국 시간 날짜. 오픈·클릭은 발생 시각과 관계없이 해당 발송 건에 귀속
+
+**GET /dashboard/summary?from=2026-09-25&to=2026-10-01 응답 data**
+
+`from`·`to`는 `YYYY-MM-DD`, 양 끝 포함, 최대 366일. 생략하면 오늘 포함 최근 7일. 오류: `COMMON_INVALID_INPUT`(400)
+
+```json
+{ "from": "2026-09-25", "to": "2026-10-01",
+  "kpi": { "attempted": 10000, "sent": 9812, "successRate": 0.9812, "uniqueOpens": 3061, "openRate": 0.312, "uniqueClicks": 667, "clickRate": 0.068, "couponUsed": 204, "conversionRate": 0.0208 } }
+```
+
+**GET /dashboard/daily-sends?days=14 응답 data** — 오늘 포함 최근 `days`일(1~90), 오래된 날짜부터, 발송 없는 날은 0
+
+```json
+[ { "date": "2026-09-18", "sent": 0 }, { "date": "2026-09-19", "sent": 1204 } ]
+```
+
 **GET /dashboard/queue 응답 data**
 
 ```json
 { "pending": 4210, "sending": 14, "retrying": 3, "ratePerSecond": 14, "expectedEndAt": "2026-09-30T18:42:00+09:00", "adSendWindowOpen": true }
 ```
+
+- 큐는 운영 상태라 TEST·NOTICE도 포함한다(같은 큐를 쓰므로). `pending` = 아직 시도하지 않은 PENDING, `retrying` = 재시도 대기 PENDING(`attempt_count > 0`), 둘은 겹치지 않는다.
+- `expectedEndAt` = 지금 + (pending + retrying + sending) ÷ `ratePerSecond`(초). 남은 건이 없으면 `null`. `adSendWindowOpen`은 08:00 이상 20:50 미만.
+
+**GET /dashboard/events?after=1520&size=20 응답 data** — 오픈·클릭 최신순(봇·TEST·NOTICE 제외), `size` 1~100(기본 20)
+
+```json
+{ "events": [ { "eventId": 1523, "eventType": "CLICK", "occurredAt": "2026-10-01T10:15:02+09:00", "campaignId": 42, "campaignName": "가을 감사 쿠폰 발송", "customerName": "홍길동" } ],
+  "lastEventId": 1523 }
+```
+
+- 10초 폴링은 직전 응답의 `lastEventId`를 `after`로 넘긴다. 새 이벤트가 없으면 `events`는 빈 배열이고 `lastEventId`는 받은 `after` 그대로다. 첫 호출은 `after` 없이 최신 `size`개.
+- 화면의 "활성 캠페인 현황"은 별도 API 없이 `GET /campaigns?status=ACTIVE`(6장)와 아래 캠페인 성과 API를 함께 쓴다.
 
 **GET /analytics/campaigns/{id} 응답 data**
 
@@ -440,7 +474,7 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - 가드레일은 코드로 적용: 시작 08:00~20:00, 시작 + 예상 소요 시간 ≤ 20:50.
 - 이벤트 100건 미만이면 `dataSufficient: false`, 기본값 평일 10:00.
 
-오류: `AI_RATE_LIMITED`(429), `AI_UNAVAILABLE`(503). LLM 요청에는 고객 개인정보를 넣지 않는다.
+오류: `AI_RATE_LIMITED`(429), `AI_UNAVAILABLE`(503), `AI_PII_DETECTED`(400). LLM 요청에는 고객 개인정보를 넣지 않는다. 서버가 요청 내용에서 이메일·전화번호 패턴을 발견하면 AI로 보내지 않고 `AI_PII_DETECTED`로 거절한다.
 
 ## 12. 오류 코드 목록
 
@@ -475,6 +509,7 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 | `UNSUBSCRIBE_INVALID_TOKEN` | 400 | 수신거부 토큰 검증 실패 |
 | `AI_RATE_LIMITED` | 429 | Gemini 한도 초과 |
 | `AI_UNAVAILABLE` | 503 | LLM 호출 실패 |
+| `AI_PII_DETECTED` | 400 | 요청 내용에 이메일·전화번호 등 개인정보가 있어 AI 전송을 차단 |
 
 ## 13. 담당별 API 요약
 

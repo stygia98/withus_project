@@ -532,3 +532,16 @@ PRD 7장에 없지만 구현에 필요해 추가했다. PRD 갱신 대상이다.
 | 세그먼트 1 "서울·경기 구매 10만 원 이상" 대상 | 35명 | PRD 10.3 시연 시나리오 |
 | 세그먼트 2 "최근 90일 가입·메일 수신동의" 대상 | 27명 (시드 넣은 날 기준) | |
 - Flyway `locations`를 프로필별로 나눠 운영 DB에는 시드가 들어가지 않게 한다.
+
+## 10. V1 이후 스키마 변경
+
+V1은 동결이므로 이후 변경은 담당 대역의 새 파일로만 한다. 변경할 때마다 이 표에 한 줄씩 추가한다.
+
+| 파일 | 담당 | 변경 | 이유 |
+|---|---|---|---|
+| `V30__track_link_unique_url.sql` | 팀원3 | `CREATE UNIQUE INDEX uq_track_link_template_url ON track_link (template_id, md5(original_url))` | 발송 시 `TrackingLinkService.rewrite`가 템플릿의 고정 링크를 자동 등록한다. 같은 템플릿의 같은 URL은 한 행만 두고, 동시 발송은 `INSERT ... ON CONFLICT (template_id, md5(original_url)) DO NOTHING`으로 처리한다. `original_url`은 길이 제한 없는 TEXT라 btree 키 한도를 피하려고 md5로 건다 |
+
+**`track_link` 등록 규칙 (V30 기준)**
+- 등록 주체는 `rewrite`(팀원3)이며 템플릿 저장 API는 관여하지 않는다. 템플릿 원문(`template.body`)의 `<a href>` 중 추적 대상만 등장 순서대로 등록한다(`link_order`).
+- `href`에 치환자(`{{...}}`)가 있는 링크는 고객마다 주소가 달라 등록·추적하지 않는다(행 증가·개인정보 방지, `{{couponUrl}}`을 제외하는 PRD 8.1과 같은 이유).
+- 템플릿은 일회성이면 `campaign.template_id`, 워크플로우면 `workflow_step.config_json.templateId`(5.2)로 찾는다. 템플릿이 없는 발송(TEST 등)은 링크를 바꾸지 않고 오픈 픽셀만 넣는다.
