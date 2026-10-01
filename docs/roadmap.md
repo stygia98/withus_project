@@ -58,7 +58,7 @@
 **팀원3**
 - [ ] 추적 API(`/t/o/{trackingToken}.gif`, `/t/c/{trackingToken}/{linkId}`), 비동기 이벤트 저장
 - [ ] Gemini 클라이언트(개인정보 미전송, 한도 초과 처리), 무료 등급 모델명·한도 확인
-- [ ] **(W1 최우선)** `TrackingLinkService`·`CouponService`·`TrackEventRepository`·`PlaceholderRenderer` stub 먼저 병합
+- [x] **(W1 최우선)** `TrackingLinkService`·`CouponService`·`TrackEventRepository`·`PlaceholderRenderer` stub 먼저 병합 (backend #10)
 
 ### W2 — 일회성 발송 끝까지 연결
 
