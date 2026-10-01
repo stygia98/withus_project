@@ -48,12 +48,12 @@
 **팀원1**
 - [ ] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트 — API·정규화 완료(backend #2), 화면은 PL 레이아웃 이후
 - [x] 수신동의 변경과 `consent_history` 기록 (backend #2)
-- [ ] **(W1 최우선)** `SegmentService`·`ConsentService` 임시 구현(stub) 먼저 병합 — 팀원2가 기다리지 않게 → stub 대신 실제 구현으로 대체: `ConsentService` 완료(backend #5), `SegmentService`는 backend #3 리뷰 중
+- [x] **(W1 최우선)** `SegmentService`·`ConsentService` 임시 구현(stub) 먼저 병합 — 팀원2가 기다리지 않게 → stub 대신 실제 구현으로 대체: `ConsentService`(backend #5), `SegmentService` 1차(backend #3)
 
 **팀원2**
-- [ ] 템플릿 CRUD API·화면(최소 기능), TinyMCE 연동, `FileStorage`(로컬) 이미지 업로드
-- [ ] `MessageSender` 인터페이스 + SMTP(Mailpit) 구현, SMS Mock
-- [ ] **발송 큐 설계 Plan 작성 → PL 리뷰** (W2 착수 전 승인)
+- [ ] 템플릿 CRUD API·화면(최소 기능), TinyMCE 연동, `FileStorage`(로컬) 이미지 업로드 — API·이미지 업로드 완료(backend #7), 화면·TinyMCE는 PL 레이아웃 이후
+- [x] `MessageSender` 인터페이스 + SMTP(Mailpit) 구현, SMS Mock (backend #7)
+- [x] **발송 큐 설계 Plan 작성 → PL 리뷰** (W2 착수 전 승인) — 승인 완료(backend #4, 승인 결과 #6)
 
 **팀원3**
 - [ ] 추적 API(`/t/o/{trackingToken}.gif`, `/t/c/{trackingToken}/{linkId}`), 비동기 이벤트 저장
@@ -69,7 +69,7 @@
 
 **팀원1**
 - [ ] CSV/xlsx 업로드(10,000행, 500행 배치 insert, 행별 결과, `suppression` 반영)
-- [ ] 세그먼트 조건 빌더: 규칙 JSON → MyBatis 동적 SQL(화이트리스트), 대상 수 미리보기 + 단위 테스트
+- [ ] 세그먼트 조건 빌더: 규칙 JSON → MyBatis 동적 SQL(화이트리스트), 대상 수 미리보기 + 단위 테스트 — 백엔드 완료(backend #3·#8, 10만 명 미리보기 최대 37ms), 빌더 화면은 PL 레이아웃 이후
 
 **팀원2**
 - [ ] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함)
