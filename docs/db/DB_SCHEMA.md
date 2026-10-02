@@ -114,7 +114,7 @@ CREATE TABLE customer (
     sms_consent_at       TIMESTAMPTZ,
     dormant_yn           CHAR(1)      NOT NULL DEFAULT 'N' CHECK (dormant_yn IN ('Y','N')),
     dormant_at           TIMESTAMPTZ,
-    consent_notified_at  TIMESTAMPTZ,                          -- F-12 직전 안내 일시
+    consent_notified_at  TIMESTAMPTZ,                          -- F-12 직전 안내 일시: 채널 구분 없는 가장 최근 안내(표시용, 발송된 NOTICE 의 sent_at). 대상 판정은 채널별 send_log 기준
     source               VARCHAR(10)  NOT NULL CHECK (source IN ('MANUAL','UPLOAD')),
     deleted_yn           CHAR(1)      NOT NULL DEFAULT 'N' CHECK (deleted_yn IN ('Y','N')),
     created_at           TIMESTAMPTZ  NOT NULL DEFAULT now(),
