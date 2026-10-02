@@ -556,7 +556,7 @@ CREATE UNIQUE INDEX uq_send_log_one_time
 
 구간 간 연결 지점 (W1에 인터페이스 먼저 합의):
 
-- 발송(팀원2) → 고객(팀원1): `SegmentService.findTargetCustomers(segmentId)`, 수신동의 확인
+- 발송(팀원2) → 고객(팀원1): `SegmentService.findTargetCustomers(segmentId)`, 수신동의 확인(`ConsentService.isSendable(customerId, channel)`, 적재용 일괄 판정 `ConsentService.filterSendable(customerIds, channel)` — 같은 규칙, 쿼리 1회)
 - 발송(팀원2) → 전환(팀원3): `TrackingLinkService.rewrite(html, sendLogId)`, `CouponService.issue(couponId, customerId, sendLogId)`
 - 워크플로우 CONDITION(팀원2) → 전환(팀원3): `TrackEventRepository` 조회
 - 대시보드·리포트(팀원3) → 발송(팀원2): `send_log` 집계

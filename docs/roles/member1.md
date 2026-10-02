@@ -8,6 +8,7 @@
 ## 제공하는 인터페이스 (다른 구간이 호출)
 - `SegmentService.findTargetCustomers(segmentId)` → 팀원2(발송·워크플로우)
 - `ConsentService.isSendable(customerId, channel)` — 수신동의·`suppression`·삭제 여부 확인 → 팀원2
+- `ConsentService.filterSendable(customerIds, channel)` — 같은 규칙의 일괄 판정(적재 N+1 방지, backend #21 PL 결정 C) → 팀원2
 
 ## 호출하는 인터페이스
 - 구매 등록 시 쿠폰 사용 처리 → `CouponService` (팀원3)
