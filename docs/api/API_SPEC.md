@@ -208,7 +208,8 @@ rule 형식은 `docs/db/DB_SCHEMA.md` 5.1.
 
 - 치환자: `{{name}}`, `{{email}}`, `{{region}}`, `{{totalPurchase}}`, `{{couponUrl}}`. 기본값 문법 `{{name|고객}}`.
 - `(광고)`, 발신자 정보, 수신거부 링크는 저장 본문에 넣지 않는다. 발송 시 시스템이 삽입한다.
-- 오류: `TEMPLATE_IN_USE`(409), `TEMPLATE_INVALID_PLACEHOLDER`(400), `TEMPLATE_SUBJECT_REQUIRED`(400).
+- 오류: `TEMPLATE_IN_USE`(409), `TEMPLATE_INVALID_PLACEHOLDER`(400), `TEMPLATE_SUBJECT_REQUIRED`(400), `TEMPLATE_AD_COPY_NOT_ALLOWED`(400).
+- 광고성(`adYn=Y`) 템플릿에는 시스템이 자동으로 넣는 문구를 직접 쓸 수 없다: 메일 제목 앞의 `(광고)`·`[광고]`, SMS 본문 맨 앞의 `(광고)`, 본문의 `무료수신거부` 문구와 080 번호. 걸리면 `error.details` 에 `field`(`subject`/`body`)와 `found` 가 담긴다. 비광고 템플릿은 검사하지 않는다.
 
 **POST /templates/{id}/preview**
 
@@ -473,7 +474,7 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 | `SEGMENT_INVALID_RULE` / `_TOO_MANY_CONDITIONS` | 400 | 조건 오류 |
 | `SEGMENT_IN_USE` | 409 | 캠페인이 참조 중 |
 | `TEMPLATE_IN_USE` | 409 | 예약·활성·일시정지 캠페인이 사용 중 |
-| `TEMPLATE_INVALID_PLACEHOLDER` / `_SUBJECT_REQUIRED` | 400 | 템플릿 오류 |
+| `TEMPLATE_INVALID_PLACEHOLDER` / `_SUBJECT_REQUIRED` / `_AD_COPY_NOT_ALLOWED` | 400 | 템플릿 오류 (광고 문구는 시스템 자동 삽입) |
 | `CAMPAIGN_INVALID_STATUS` | 409 | 현재 상태에서 불가능한 전이 |
 | `CAMPAIGN_SEND_WINDOW_EXCEEDED` | 422 | 광고성 발송이 20:50을 넘김 |
 | `CAMPAIGN_COUPON_REQUIRED` | 422 | `{{couponUrl}}` 템플릿에 쿠폰 미연결 |
