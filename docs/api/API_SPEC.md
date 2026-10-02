@@ -309,7 +309,7 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 
 **POST /campaigns/{id}/workflow/validate 응답 data**
 
-`checks`는 구조와 상관없이 **항상 같은 코드 목록**(`TRIGGER_COUNT`, `NODE_COUNT`, `UNIQUE_NODE_IDS`, `LINKS_MATCH_NODE_TYPE`, `CONFIG_VALID`, `WAIT_DURATION_WITHIN_RANGE`, `COUPON_URL_REQUIRES_COUPON`, `COUPON_WITHIN_VALID_PERIOD`, `NO_CYCLE`, `DEPTH_WITHIN_LIMIT`, `ALL_PATHS_END_WITH_END`, `EMAIL_EVENT_REQUIRES_SEND_WAIT`, `ALL_NODES_REACHABLE`)으로 내려온다. TRIGGER가 1개가 아니거나 노드가 15개를 넘거나 id가 정상이 아니면 뒤쪽 구조 검사 5개는 `passed=false`, "검사하지 못함"으로 내려온다.
+`checks`는 구조와 상관없이 **항상 같은 코드 목록**(`TRIGGER_COUNT`, `NODE_COUNT`, `UNIQUE_NODE_IDS`, `LINKS_MATCH_NODE_TYPE`, `CONFIG_VALID`, `WAIT_DURATION_WITHIN_RANGE`, `COUPON_URL_REQUIRES_COUPON`, `COUPON_WITHIN_VALID_PERIOD`, `TEMPLATE_EXISTS`, `NO_CYCLE`, `DEPTH_WITHIN_LIMIT`, `ALL_PATHS_END_WITH_END`, `EMAIL_EVENT_REQUIRES_SEND_WAIT`, `ALL_NODES_REACHABLE`)으로 내려온다. `TEMPLATE_EXISTS`는 SEND 노드가 가리키는 템플릿이 모두 존재하는지 보며, 없으면 `passed=false`와 없는 템플릿 ID 목록을 메시지로 돌려준다(예외로 끊지 않는다). TRIGGER가 1개가 아니거나 노드가 15개를 넘거나 id가 정상이 아니면 뒤쪽 구조 검사 5개는 `passed=false`, "검사하지 못함"으로 내려온다.
 
 ```json
 {
