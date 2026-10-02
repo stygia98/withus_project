@@ -30,7 +30,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 
 ## 3. 로컬 수동 확인 절차
 
-준비: `cd infra && docker compose up -d` → 백엔드 `./mvnw spring-boot:run -Dspring-boot.run.profiles=local`(시드 `R__seed_local.sql` 자동 적용) → 프론트 `npm run dev` → `http://localhost:3000` 에 `infra/.env` 의 `OWNER_EMAIL`/`OWNER_PASSWORD` 로 로그인.
+준비: `cd infra && docker compose up -d` → 백엔드 `./mvnw spring-boot:run -Dspring-boot.run.profiles=local`(시드 `R__seed_local.sql` 자동 적용) → 프론트 `npm run dev` → `http://localhost:3000` 에 `infra/.env` 의 `OWNER_EMAIL`/`OWNER_PASSWORD` 로 로그인. 7번(메일의 수신거부 링크)은 백엔드를 `WITHUS_PUBLIC_BASE_URL=http://localhost:3000` 으로 띄운다 — 기본값(`http://localhost:8080`)이면 링크가 백엔드로 가서 401 이 난다(운영은 Amplify 주소라 해당 없음).
 
 | # | 화면 | 절차 | 기대 결과 |
 |---|---|---|---|
@@ -43,7 +43,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 | 7 | `/unsubscribe/[token]` | Mailpit(`http://localhost:8025`) 받은 메일의 수신거부 링크 열기 → 채널 선택 → 버튼 | 열기만 해서는 동의 그대로, 버튼 후 완료 화면·처리 일시(서울 시간), 고객 상세 동의 N |
 | 8 | 고객 등록 | 7에서 수신거부한 번호를 하이픈 넣어 새 고객으로 등록 | SMS 동의 N, `suppressedChannels` 에 SMS |
 
-7은 캠페인 발송(팀원2 #31) 병합 후 실제 메일로 확인한다. 그 전에는 `UnsubscribeApiTest`(서명된 토큰으로 GET/POST) 결과로 대신한다. 수동 확인 결과는 아래에 날짜와 함께 남긴다(task20).
+7은 캠페인 발송(팀원2 #31, 2026-10-02 병합)으로 받은 실제 메일로 확인한다. 수동 확인 결과는 아래에 날짜와 함께 남긴다(task20).
 
 ### 수동 확인 결과
 
@@ -55,7 +55,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 | 2026-10-02 | 4 | 통과 — 이메일 동의 → 거부, 이력 1건(관리자·메모) |
 | 2026-10-02 | 5 | 통과 — 수신거부 기록은 DB 에 직접 넣어 준비(실제 링크는 #31 이후). 증빙 없이 버튼 비활성, 증빙 후 Y·suppression 해제·이력에 증빙 |
 | 2026-10-02 | 6 | 통과 — 45,000원 등록 → 누적구매액 1,000 → 46,000원, 구매 이력(서울 시간). 쿠폰 선택은 발급 쿠폰이 없어 자동 테스트로 대신 |
-| 2026-10-02 | 7 | 보류 — 캠페인 발송(팀원2 #31) 병합 후 |
+| 2026-10-02 | 7 | 통과 — 이메일 동의 Y 고객 1명 세그먼트로 일회성 캠페인 시작 → Mailpit 메일 `(광고)` 제목, 본문 링크 `/unsubscribe/{token}`·`List-Unsubscribe` 헤더(one-click). 링크 열기만 해서는 동의 Y·이력 없음, 이메일 선택 후 버튼 → "수신거부가 처리되었습니다"·처리 일시 17:16(서울), 동의 N·이력 UNSUBSCRIBE·suppression(UNSUBSCRIBE). 같은 세그먼트로 다시 시작한 캠페인은 send_log SKIPPED, 메일 추가 없음 |
 | 2026-10-02 | 8 | 통과 — `010-5555-9999` 등록, suppression `01055559999` 와 일치 → SMS 동의 N, "과거 수신거부 이력이 있어 해당 채널은 수신거부로 등록했습니다." 안내, 숫자만 저장 |
 
 리허설 중 화면 콘솔 오류 없음. 고객 구간 버그 없음. 공통 영역 발견 1건: backend 이슈 #46(local 시드가 운영 Flyway 스캔에 포함될 수 있음, PL 담당).
