@@ -20,10 +20,10 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 
 | PRD 10.3 항목 | 팀원1 몫 | 근거 | 함께 확인할 사람 |
 |---|---|---|---|
-| 수신거부 후 해당 고객에게 더 이상 발송되지 않는다 | 수신거부 처리(suppression + 동의 N), 발송 가능 판정 `ConsentService.isSendable`·`filterSendable` | `customer/UnsubscribeApiTest`(처리), `customer/ConsentServiceTest#수신거부_목록에_있으면_동의_Y_여도_불가_다른_채널은_영향_없음`, `#여러_고객_일괄_판정은_건별_판정과_같다` | 팀원2 (적재·발송 직전 재확인 `campaign/SendDispatcherTest#적재_후_수신거부한_고객은_발송_직전_재확인에서_SKIPPED가_된다`) |
+| 수신거부 후 해당 고객에게 더 이상 발송되지 않는다 | 수신거부 처리(suppression + 동의 N), 발송 가능 판정 `ConsentService.isSendable`·`filterSendable` | `customer/UnsubscribeApiTest`(처리), `customer/ConsentServiceTest#수신거부_목록에_있으면_동의_Y_여도_불가_다른_채널은_영향_없음`, `#여러_고객_일괄_판정은_건별_판정과_같다` | 팀원2 (적재 `campaign/SendQueueServiceRecipientTest#일회성_적재는_동의_확인을_청크당_한_번에_하고_거부는_SKIPPED다`(backend #48), 발송 직전 재확인 `campaign/SendDispatcherTest#적재_후_수신거부한_고객은_발송_직전_재확인에서_SKIPPED가_된다`) |
 | 적재 후 발송 전에 수신거부한 고객에게는 발송되지 않는다(SKIPPED) | 위와 같음 — 수신거부 즉시 `isSendable` 이 false | 위와 같음 | 팀원2 |
 | 관리자가 구매를 등록하면 누적구매액이 늘고, `PURCHASE_GTE` 분기와 전환율에 반영된다 | 구매 등록·누적구매액, 쿠폰 선택 시 `CouponService.markUsed` 호출 | `customer/PurchaseApiTest#구매를_등록하면_누적구매액에_더하고_최신순으로_보여준다`, `#쿠폰은_이_고객_발급분_미사용_구매일이_유효기간_안일_때만_쓸_수_있다` | 팀원2 (`PURCHASE_GTE` 분기), 팀원3 (전환율) |
-| 동의 일시를 2년 전으로 바꾼 테스트 고객에게 수신동의 확인 안내가 발송된다 | F-12 배치: 대상 선정·NOTICE 적재·`consent_notified_at` 갱신 | `customer/ConsentNoticeBatchTest` 10건 (backend #40, 리뷰 중) | 팀원2 (NOTICE 본문 렌더링·08:00~20:50 보류, F-04 작업) — 렌더링 병합 전에는 `withus.scheduler.consent-notice.enabled=false` |
+| 동의 일시를 2년 전으로 바꾼 테스트 고객에게 수신동의 확인 안내가 발송된다 | F-12 배치: 대상 선정·NOTICE 적재·`consent_notified_at` 갱신 | `customer/ConsentNoticeBatchTest` 10건 (backend #40, 2026-10-02 병합) | 팀원2 (NOTICE 본문 렌더링·08:00~20:50 보류, F-04 작업) — 렌더링 병합 전에는 `withus.scheduler.consent-notice.enabled=false` |
 | 이름이 없는 고객에게 "안녕하세요 고객님"처럼 기본값으로 발송된다 | 이름을 비워 둘 수 있는 등록·업로드 | `customer/CustomerNormalizerTest#선택_항목의_빈_값은_null`(등록·업로드 공용 정규화) | 팀원3 (렌더러 기본값), 팀원2 (발송) — local 시드 25·50·75·100번은 이름 없음 |
 | 발송 큐가 10만 건 처리 중이어도 휴면 배치 등 다른 스케줄 작업이 멈추지 않는다 | 휴면 배치·F-12 배치는 `fixedDelay` 10분, 03시 이후 그날 첫 회차 | `customer/DormantBatchTest#새벽_3시_이후_그날_첫_회차에만_실행한다` | PL (스케줄러 스레드 풀 `spring.task.scheduling.pool.size=5`), 팀원2 (발송 작업) |
 | 반송·스팸신고 (PRD 8.2 SES 웹훅, 10.3 운영 시나리오 전제) | 서명 검증, suppression·동의 N, 영구 반송은 send_log BOUNCED | `customer/SesWebhookTest` 7건 | PL (W5 SNS 구독 URL·`SES_TOPIC_ARN`) |
@@ -85,6 +85,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 - 기대 결과: 40행 중 신규 36·실패 4(38~41행: 이메일·지역·날짜·수신동의 값 오류)
 - "서울·경기, 구매액 10만 원 이상" 미리보기: 대상 15명 · 메일 동의 3명(인증 주소) · SMS 동의 15명 — 나머지 12명은 미인증 주소라 메일 동의 N 으로 두어 캠페인 메일이 샌드박스에서 실패하지 않게 했다
 - 이름 없는 고객 3명(31~33행, 부산), 휴대폰은 모두 하이픈 형식(`010-7000-xxxx`, SMS 는 Mock)
+- **실제 SMS 연동(O-03) 이후에는 이 파일 고객에게 SMS 를 보내지 않는다** — 휴대폰 번호가 실제로 있을 수 있는 번호다(메인 #17 PL 리뷰)
 - 2026-10-02 local 에서 업로드해 위 건수와 미리보기 증가분(+15·+3·+15)을 확인했다
 
 **확인 순서**: 4장 준비 → 시연 데이터 업로드 → 1장 "운영 확인" 열 → 2장(팀원2 캠페인 발송 후) → 3장 7번 수신거부 링크 → SES 반송·스팸신고 실연동
