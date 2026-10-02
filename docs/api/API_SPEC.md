@@ -298,9 +298,13 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 ```
 
 - `key`는 요청 안에서만 쓰는 임시 식별자. 서버가 step_id로 바꿔 저장한다.
-- 저장 시 검증(실패 시 `WORKFLOW_INVALID_STRUCTURE` 400, `details`에 위반 목록): TRIGGER 1개, CONDITION 중첩 2단계 이내, 노드 15개 이하, 모든 경로 END, 순환 없음, 메일 이벤트 조건 앞에 SEND_EMAIL→WAIT, `{{couponUrl}}` 템플릿에 쿠폰 연결, 쿠폰 유효기간.
+- 저장 시 검증(실패 시 `WORKFLOW_INVALID_STRUCTURE` 400, `details`에 위반 메시지 문자열 목록): TRIGGER 1개, CONDITION 중첩 2단계 이내, 노드 15개 이하(요청은 50개까지), 모든 경로 END, 순환 없음, 모든 노드가 TRIGGER에서 닿음, 메일 이벤트 조건 앞에 **직전** SEND_EMAIL→WAIT, `{{couponUrl}}` 템플릿에 쿠폰 연결, 쿠폰이 존재하고 유효기간 안, WAIT 대기 1분~90일(정수), 노드 id 중복 없음, 노드 종류에 맞는 연결(END는 연결 없음, CONDITION은 yes·no, 그 외는 next), 노드 설정 정상(SEND는 templateId, CONDITION은 condition, PURCHASE_GTE는 amount).
+- 존재하지 않는 템플릿을 가리키면 `WORKFLOW_INVALID_STRUCTURE`(400). DRAFT가 아닌 캠페인에 PUT하면 `CAMPAIGN_INVALID_STATUS`(409). 같은 캠페인의 PUT은 한 번에 하나씩 처리된다.
+- GET 응답은 `{ "steps": [{ "stepId", "nodeType", "config", "next", "yes", "no", "depth" }] }`이고 `next`·`yes`·`no`는 다른 노드의 `stepId`(숫자)다.
 
 **POST /campaigns/{id}/workflow/validate 응답 data**
+
+`checks`는 구조와 상관없이 **항상 같은 코드 목록**(`TRIGGER_COUNT`, `NODE_COUNT`, `UNIQUE_NODE_IDS`, `LINKS_MATCH_NODE_TYPE`, `CONFIG_VALID`, `WAIT_DURATION_WITHIN_RANGE`, `COUPON_URL_REQUIRES_COUPON`, `COUPON_WITHIN_VALID_PERIOD`, `NO_CYCLE`, `DEPTH_WITHIN_LIMIT`, `ALL_PATHS_END_WITH_END`, `EMAIL_EVENT_REQUIRES_SEND_WAIT`, `ALL_NODES_REACHABLE`)으로 내려온다. TRIGGER가 1개가 아니거나 노드가 15개를 넘거나 id가 정상이 아니면 뒤쪽 구조 검사 5개는 `passed=false`, "검사하지 못함"으로 내려온다.
 
 ```json
 {
