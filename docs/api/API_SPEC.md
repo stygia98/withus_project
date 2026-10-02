@@ -468,10 +468,13 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 
 - 이벤트 저장은 비동기. 없는 토큰은 응답은 정상, 저장만 하지 않는다.
 - 봇 판정(발송 후 10초 이내, 스캐너 User-Agent, 1초 안 전체 링크 클릭)은 저장 시 `bot_yn`으로 기록한다.
-- SES 웹훅: `SubscriptionConfirmation` 처리, `Bounce(Permanent)`·`Complaint` → `provider_message_id`로 send_log 조회 → BOUNCED, suppression 추가, 동의 N.
+- SES 웹훅: `SubscriptionConfirmation` 처리, `Bounce(Permanent)`·`Complaint` → suppression 추가, 동의 N. `Bounce(Permanent)`는 원 발송 건도 BOUNCED.
   - 검증: `TopicArn` = 설정 `ses.topic-arn`(환경변수 `SES_TOPIC_ARN`, 비어 있으면 모두 무시), `SigningCertURL`·`SubscribeURL`은 `https://sns.<region>.amazonaws.com`만, 서명은 `SignatureVersion` 1(SHA1)·2(SHA256). 실패는 로그만 남기고 200.
   - suppression·동의 N은 알림의 수신자 주소(`bouncedRecipients`·`complainedRecipients`) 기준이다. 고객이 없는 주소도 목록에 남는다. 일시 반송(Transient)은 무시.
-  - `send_log` BOUNCED 반영은 팀원2 인터페이스가 생기면 연결한다(send_log 쓰기는 소유 도메인만).
+  - 처리 순서: suppression·동의 N을 먼저 하고, 그다음 `send_log` BOUNCED 반영. BOUNCED 반영이 실패해도 로그만 남기고 200(suppression은 유지).
+  - BOUNCED 반영: 알림의 `mail.messageId` = `send_log.provider_message_id`인 건을 `SendQueueService.markBounced`로 바꾼다(send_log 쓰기는 소유 도메인만). **`SENT`인 건만** 바뀌고, `messageId`가 없거나 맞는 건이 없거나 아직 `SENDING`이면 그대로 둔다. 같은 알림이 다시 와도(SNS at-least-once) 결과가 같다.
+  - 스팸신고(`Complaint`)는 `send_log`를 `SENT`로 둔다. BOUNCED로 바꾸면 이미 집계된 오픈·클릭·전환이 사후에 빠지기 때문이다(backend #33 리뷰, PRD 결정은 PL 확인 대기).
+  - 지표에서 BOUNCED는 발송 시도(`attempted`)에 포함하고 발송 성공(`sent`)에서는 제외한다(10장 지표 정의).
 
 ## 10. 대시보드·성과 리포트 (팀원3 · `tracking`)
 

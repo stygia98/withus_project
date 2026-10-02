@@ -463,6 +463,8 @@ PENDING ──(잡기·커밋)──▶ SENDING ──(성공)──▶ SENT ─
 PENDING ──(발송 직전 재확인 실패)──▶ SKIPPED
 ```
 
+- BOUNCED는 `SENT`에서만 간다(영구 반송 웹훅, `markBounced`의 `status = 'SENT'` 조건). `FAILED`·`SKIPPED`·`SENDING`에서는 BOUNCED로 가지 않는다. 스팸신고는 `SENT` 그대로 둔다(API_SPEC 9장).
+
 **`workflow_instance.status`**: `WAITING` → `RUNNING` → (`WAITING` | `COMPLETED` | `FAILED`), 캠페인 종료·고객 삭제 시 `CANCELLED`. `RUNNING`으로 10분 넘게 남으면 `WAITING`으로 복구.
 
 **`campaign.status`**: PRD 6.7 참고.
