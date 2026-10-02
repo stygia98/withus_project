@@ -13,7 +13,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 | 삭제된 고객과 같은 이메일로 다시 등록되고, 과거 수신거부 이력이 있으면 동의 N으로 등록된다 | `customer/CustomerApiTest#삭제한_고객의_이메일로_다시_등록하면_새_고객이다`, `#suppression_에_있는_채널은_동의를_N으로_저장한다`, `customer/UnsubscribeApiTest#삭제된_고객의_링크도_값으로_거부되고_같은_이메일로_다시_등록한_고객도_N` | 수신거부한 고객 삭제 → 같은 이메일로 등록 → 이메일 동의 N, 응답 `suppressedChannels` |
 | 수신거부한 고객은 관리자가 증빙과 함께 동의 Y로 바꿀 때만 다시 발송 대상이 된다 | `customer/CustomerConsentApiTest#수신거부된_채널은_증빙_없이_Y로_바꿀_수_없고_증빙이_있으면_해제한다`, `customer/CustomerUploadApiTest#휴대폰_칸을_비워도_기존_번호가_수신거부면_SMS_동의는_N_유지`(업로드로 해제 안 됨) | 고객 상세 동의 변경: 증빙 없이 Y → 거부(422), 증빙 입력 → Y·이력에 증빙 |
 | 대문자 이메일(Foo@A.com)로 업로드해도 기존 고객(foo@a.com)과 같은 사람으로 처리된다 | `customer/CustomerUploadApiTest#신규_갱신_수신거부_실패를_행별로_처리하고_성공_행은_저장한다`(대문자 이메일 행), `customer/CustomerNormalizerTest#이메일은_소문자와_trim` | 기존 고객 이메일을 대문자로 바꾼 CSV 업로드 → 갱신 1건(신규 아님) |
-| 하이픈이 있는 휴대폰 번호와 없는 번호가 수신거부 목록과 똑같이 비교된다 | `customer/CustomerNormalizerTest#휴대폰은_숫자만` — 등록·업로드 경로의 명시 테스트는 **보강 예정(task19)** | 수신거부 목록에 있는 번호를 하이픈 넣어 등록 → SMS 동의 N |
+| 하이픈이 있는 휴대폰 번호와 없는 번호가 수신거부 목록과 똑같이 비교된다 | `customer/CustomerApiTest#하이픈_휴대폰도_수신거부_목록의_숫자_번호와_같게_비교한다_PRD_10_3`, `customer/CustomerUploadApiTest#하이픈_휴대폰도_수신거부_목록의_숫자_번호와_같게_비교한다_PRD_10_3` (backend #45), `customer/CustomerNormalizerTest#휴대폰은_숫자만` | 수신거부 목록에 있는 번호를 하이픈 넣어 등록 → SMS 동의 N |
 | 기존 고객을 CSV로 다시 올려도 등록된 구매로 쌓인 누적구매액이 줄지 않는다 | `customer/CustomerUploadApiTest#신규_갱신_수신거부_실패를_행별로_처리하고_성공_행은_저장한다`("누적구매액은 파일 값(0)으로 바뀌지 않는다"), `customer/CustomerApiTest#수정은_누적구매액과_수신동의를_바꾸지_않는다` | 구매 등록한 고객을 누적구매액 0으로 다시 업로드 → 금액 그대로 |
 
 ## 2. 다른 구간과 함께 검증되는 항목 (팀원1 몫만 표시)
