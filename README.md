@@ -37,6 +37,7 @@ cd infra && docker compose up -d                  # PostgreSQL 17 + Mailpit(http
 | [`docs/api/API_SPEC.md`](docs/api/API_SPEC.md) | API 계약 초안 (최종은 Swagger) |
 | [`docs/db/DB_SCHEMA.md`](docs/db/DB_SCHEMA.md) | 스키마, `V1__init.sql` 원본 |
 | [`docs/tech/TECH_STACK.md`](docs/tech/TECH_STACK.md) | 의존성·설정·버전 고정표 (6장 결정 사항) |
+| [`docs/design/mockups/`](docs/design/mockups/) | 화면 목업 PNG 8장 (관리자 6 · 고객 모바일 2). 레이아웃·색·간격 참고용 |
 | [`docs/plans/`](docs/plans/) | 승인된 설계 Plan (발송 큐·워크플로우·세그먼트 SQL 등). 구현 전 "PL 승인 결과" 절 확인 |
 | [`docs/meetings/`](docs/meetings/) | **결정 기록 — 시작 전 [킥오프 결정 사항](docs/meetings/kickoff-decisions.md) 먼저 읽기** |
 

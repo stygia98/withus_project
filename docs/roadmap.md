@@ -42,8 +42,8 @@
 - [x] 로그인/로그아웃/토큰 재발급(httpOnly 쿠키), CSRF(`GET /api/v1/auth/csrf`), 로그인 5회 실패 잠금
 - [x] 최초 OWNER 계정 생성, 스케줄러 스레드 풀 설정
 - [x] Next.js 골격: rewrites(`/api/*`), 공통 fetch 래퍼, `lib/query-keys.ts`, 로그인 화면
-- [ ] 레이아웃·GNB·인증 가드 (목업 PNG 수령 후)
-- [ ] 사용자 관리 API(`/api/v1/members`)
+- [x] 레이아웃·GNB·인증 가드 (목업: `docs/design/mockups/`) (frontend #8 — 디자인 토큰, 30분 후 로그아웃 버그 수정 포함)
+- [x] 사용자 관리 API(`/api/v1/members`)·화면(`/settings/users`) (backend #26, frontend #9)
 
 **팀원1**
 - [x] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트 (backend #2, frontend #1 — 레이아웃은 PL 작업 후 자동 적용)
@@ -68,8 +68,8 @@
 - [ ] 일회성 발송 E2E 통합 테스트
 
 **팀원1**
-- [ ] CSV/xlsx 업로드(10,000행, 500행 배치 insert, 행별 결과, `suppression` 반영)
-- [ ] 세그먼트 조건 빌더: 규칙 JSON → MyBatis 동적 SQL(화이트리스트), 대상 수 미리보기 + 단위 테스트 — 백엔드 완료(backend #3·#8, 10만 명 미리보기 최대 37ms), 빌더 화면은 PL 레이아웃 이후
+- [x] CSV/xlsx 업로드(10,000행, 500행 배치 insert, 행별 결과, `suppression` 반영) (backend #9, frontend #2 — 1만 행 2.3초)
+- [x] 세그먼트 조건 빌더: 규칙 JSON → MyBatis 동적 SQL(화이트리스트), 대상 수 미리보기 + 단위 테스트 (backend #3·#8, frontend #2 — 10만 명 미리보기 최대 37ms)
 
 **팀원2**
 - [ ] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함)
@@ -91,18 +91,19 @@
 - [ ] W3 통합 테스트(워크플로우 + 수신거부 + 쿠폰)
 
 **팀원1**
-- [ ] 수신거부 페이지(GET 확인 / POST 처리), 원클릭 수신거부 API, `suppression` 관리·해제 절차
-- [ ] SES 반송·스팸신고 웹훅(SNS 서명 검증, Mock 요청으로 검증)
-- [ ] 휴면 판정 배치(180일 클릭·구매 없음), 구매 등록(`purchase`, 쿠폰 사용 연계)
+- [x] 수신거부 페이지(GET 확인 / POST 처리), 원클릭 수신거부 API, `suppression` 관리·해제 절차 (backend #22, frontend #7, 메인 #8 — 토큰은 PL 공용 `UnsubscribeTokens`)
+- [x] SES 반송·스팸신고 웹훅(SNS 서명 검증, Mock 요청으로 검증) (backend #24, 메인 #9 — 실제 SNS 서명은 W5 배포 후 확인, `send_log` BOUNCED 반영은 팀원2 인터페이스 대기)
+- [x] 휴면 판정 배치(180일 클릭·구매 없음), 구매 등록(`purchase`, 쿠폰 사용 연계) (휴면 배치 backend #15, 구매 등록 backend #14·메인 #4)
 
 **팀원2**
+- [x] 워크플로우 엔진 설계 Plan → PL 승인 (backend #20, 승인 결과는 `docs/plans/workflow-plan.md` 11장)
 - [ ] 워크플로우 빌더(폼 기반) + 구조 검증(분기 2단계, 노드 15개, 순환 금지, SEND 노드별 쿠폰)
 - [ ] 워크플로우 엔진: 500건 반복 처리, WAIT(`sent_at` 기준), CONDITION(봇 제외), 멈춤 복구, 멱등성
 - [ ] 캠페인 상태 전이(DRAFT/SCHEDULED/ACTIVE/PAUSED/COMPLETED), 일시정지 시 PENDING 보류
 
 **팀원3**
-- [ ] 쿠폰 CRUD(정액·정률·상한, 고정 기간), 발급(`CouponService.issue`), `{{couponUrl}}` 연동
-- [ ] 고객 쿠폰 페이지 `/c/[token]`(카드형, POST 사용 처리, 모바일 대응), 전환 집계
+- [x] 쿠폰 CRUD(정액·정률·상한, 고정 기간), 발급(`CouponService.issue`), `{{couponUrl}}` 연동 (backend #16, frontend #4 — 발급 멱등·원자적 사용 처리)
+- [x] 고객 쿠폰 페이지 `/c/[token]`(카드형, POST 사용 처리, 모바일 대응), 전환 집계 (backend #16, frontend #4)
 - [ ] 봇 판정 User-Agent 목록을 실제 메일로 검증·보강
 
 ### W4 — AI·통합·기능 동결
@@ -122,8 +123,8 @@
 - [ ] (선택) A/B 테스트, React Flow 캔버스
 
 **팀원3**
-- [ ] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장)
-- [ ] 성과 리포트 마무리(단계별 차트, 전환율, A/B 비교)
+- [x] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장) (backend #16, frontend #4 — W4 항목 선행 완료)
+- [ ] 성과 리포트 마무리(단계별 차트, 전환율, A/B 비교) — 단계별·전환율 완료(backend #16, frontend #4), A/B 비교는 A/B 기능 결정 후
 - [ ] 여유 시 팀원2 워크플로우 안정화 지원(부하 데이터 생성, CONDITION 조회 검증)
 
 ### W5 — 운영 배포와 시연

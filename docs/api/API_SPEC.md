@@ -72,7 +72,7 @@
 | POST | `/api/v1/auth/refresh` | 공개(쿠키) | Access 재발급, Refresh 교체 |
 | POST | `/api/v1/auth/logout` | 로그인 | Refresh 무효화, 쿠키 만료 |
 | GET | `/api/v1/auth/me` | 로그인 | 내 정보 |
-| GET | `/api/v1/members` | O | 사용자 목록 (미구현, PL) |
+| GET | `/api/v1/members` | O | 사용자 목록 |
 | POST | `/api/v1/members` | O | 사용자 생성 |
 | PATCH | `/api/v1/members/{memberId}` | O | 역할·활성 여부 변경 |
 
@@ -86,6 +86,21 @@
 ```
 
 오류: `AUTH_INVALID_CREDENTIALS`(401), `AUTH_ACCOUNT_LOCKED`(401, `error.details.lockedUntil` 포함, 5회 실패 시 5분), `AUTH_ACCOUNT_INACTIVE`(401).
+
+**사용자 관리 (`/members`, OWNER 전용)**
+
+```json
+// GET 응답 data (member_id 순, 사용자 수가 적어 페이징 없음). POST·PATCH 응답 data 는 이 형식 1건
+[ { "memberId": 2, "email": "manager@withus.kr", "name": "김마케팅", "role": "MANAGER", "active": true } ]
+// POST 요청 — 초기 비밀번호는 OWNER 가 정해 전달한다(8~72자). 이메일은 소문자·trim 으로 저장
+{ "email": "staff@withus.kr", "name": "박직원", "role": "STAFF", "password": "********" }
+// PATCH 요청 — 보내지 않은 값은 그대로
+{ "role": "MANAGER", "active": false }
+```
+
+- 자기 계정의 역할·활성 여부는 바꿀 수 없다(`MEMBER_SELF_CHANGE`). 이 API 는 활성 OWNER 만 부르므로 마지막 OWNER 가 사라지는 경우도 생기지 않는다.
+- 역할·활성 여부를 바꾸면 그 사용자의 Refresh 토큰을 지운다. 이미 받은 Access 토큰은 만료(30분)까지 유효하므로 **늦어도 30분 안에** 새 역할·비활성이 반영된다.
+- 오류: `MEMBER_DUPLICATE_EMAIL`(409), `MEMBER_SELF_CHANGE`(400), 없는 사용자 `COMMON_NOT_FOUND`(404).
 
 ## 3. 고객 (팀원1 · `customer`)
 
@@ -131,6 +146,27 @@
 - suppression에 있는 값을 Y로 바꿀 때는 `evidenceNote` 필수 → suppression 삭제, `consent_history`(source=ADMIN, note) 기록.
 - 오류: `CUSTOMER_CONSENT_EVIDENCE_REQUIRED`(422).
 
+**GET /customers/{id}/activity** — 고객 상세의 발송·이벤트·쿠폰 이력
+
+```json
+// 응답 data
+{
+  "sends": [
+    { "sendLogId": 5012, "campaignId": 12, "campaignName": "10월 프로모션", "channel": "EMAIL", "kind": "CAMPAIGN",
+      "status": "SENT", "errorMessage": null, "createdAt": "2026-10-05T09:00:00+09:00", "sentAt": "2026-10-05T09:00:03+09:00",
+      "openedAt": "2026-10-05T10:12:00+09:00", "clickedAt": null }
+  ],
+  "coupons": [
+    { "issueId": 318, "couponId": 7, "couponName": "10월 재구매 쿠폰", "status": "USABLE",
+      "validFrom": "2026-10-01", "validTo": "2026-10-31", "issuedAt": "2026-10-05T09:00:03+09:00", "usedAt": null }
+  ]
+}
+```
+
+- `sends`: 최근 100건, 최신순. NOTICE도 포함(`campaignName` null). `openedAt`·`clickedAt`은 봇 제외 첫 이벤트 시각.
+- `coupons`: 발급 전체, 최신 발급순. `status`는 오늘 기준 `USABLE`·`USED`·`EXPIRED`·`NOT_STARTED`. 구매 등록 화면의 쿠폰 선택 목록은 선택한 구매일이 유효기간 안인 미사용 쿠폰이다 (`status`는 오늘 기준이라 구매일 판정에 쓰지 않는다, backend #14).
+- 삭제된 고객: `COMMON_NOT_FOUND`(404).
+
 **POST /customers/uploads** (multipart, `file`)
 
 ```json
@@ -152,7 +188,15 @@
 ```
 
 - `total_purchase` 가산. `couponIssueId`는 이 고객에게 발급됐고, 미사용이며, 유효기간 안이어야 한다.
-- 오류: `COUPON_NOT_USABLE`(422), `COUPON_ALREADY_USED`(409).
+- `amount`는 1 이상 필수. `couponIssueId`·`purchasedAt`은 선택(`purchasedAt` 생략 시 지금). `purchasedAt`이 미래면 `COMMON_INVALID_INPUT`(400).
+- 쿠폰 유효기간은 **구매일**(`purchasedAt`의 KST 날짜) 기준으로 본다.
+- 오류: `COUPON_NOT_USABLE`(422, 다른 고객 발급분·없는 발급 건·기간 밖), `COUPON_ALREADY_USED`(409).
+
+```json
+// 응답 data (GET 목록은 이 형식의 배열, 최신 구매순). 쿠폰 미사용이면 couponIssueId·couponName 은 null
+{ "purchaseId": 91, "amount": 45000, "couponIssueId": 318, "couponName": "10월 재구매 쿠폰",
+  "purchasedAt": "2026-10-02T14:10:00+09:00" }
+```
 
 ## 4. 세그먼트 (팀원1 · `segment`)
 
@@ -390,6 +434,15 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 
 **POST /public/coupons/{token}/use**: 요청 본문 없음. 성공하면 위와 같은 카드(`status: "USED"`)를 돌려준다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②). 오류: `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422), `COUPON_NOT_FOUND`(404).
 
+**GET /public/unsubscribe/{token} 응답 data**
+
+```json
+{ "customerName": "김**", "channels": ["EMAIL", "SMS"], "unsubscribedChannels": ["SMS"] }
+```
+
+- `channels`: 고를 수 있는 채널(휴대폰이 없으면 `EMAIL`만). `unsubscribedChannels`: 이미 동의 N이거나 `suppression`에 있는 채널.
+- `customerName`은 쿠폰 페이지와 같은 마스킹, 이름이 없으면 `null`.
+
 **POST /public/unsubscribe/{token}**
 
 ```json
@@ -400,7 +453,10 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 ```
 
 - 토큰 = Base64URL(`send_log_id:customer_id:HMAC-SHA256`). 검증 실패: `UNSUBSCRIBE_INVALID_TOKEN`(400), 화면에는 "유효하지 않은 링크"만 표시.
-- 처리: 동의 N, `suppression` 추가, `consent_history`(source=UNSUBSCRIBE).
+- 처리: 동의 N, `suppression` 추가, `consent_history`(source=UNSUBSCRIBE). 같은 요청을 다시 보내도 결과는 같고 이력은 동의가 바뀔 때만 남는다.
+- `channels`는 실제 처리한 채널이다. 휴대폰이 없는 고객의 `SMS`는 빠진다.
+- 삭제된 고객의 링크도 처리한다(이메일·휴대폰 값을 `suppression`에 추가, 같은 값의 활성 고객 동의 N).
+- 원클릭(`POST /unsubscribe/one-click/{token}`)은 본문(`List-Unsubscribe=One-Click`)을 보지 않고 `EMAIL`만 처리하며, 응답은 위와 같다.
 
 ## 9. 추적·웹훅 (팀원3 · 팀원1)
 
@@ -413,6 +469,9 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - 이벤트 저장은 비동기. 없는 토큰은 응답은 정상, 저장만 하지 않는다.
 - 봇 판정(발송 후 10초 이내, 스캐너 User-Agent, 1초 안 전체 링크 클릭)은 저장 시 `bot_yn`으로 기록한다.
 - SES 웹훅: `SubscriptionConfirmation` 처리, `Bounce(Permanent)`·`Complaint` → `provider_message_id`로 send_log 조회 → BOUNCED, suppression 추가, 동의 N.
+  - 검증: `TopicArn` = 설정 `ses.topic-arn`(환경변수 `SES_TOPIC_ARN`, 비어 있으면 모두 무시), `SigningCertURL`·`SubscribeURL`은 `https://sns.<region>.amazonaws.com`만, 서명은 `SignatureVersion` 1(SHA1)·2(SHA256). 실패는 로그만 남기고 200.
+  - suppression·동의 N은 알림의 수신자 주소(`bouncedRecipients`·`complainedRecipients`) 기준이다. 고객이 없는 주소도 목록에 남는다. 일시 반송(Transient)은 무시.
+  - `send_log` BOUNCED 반영은 팀원2 인터페이스가 생기면 연결한다(send_log 쓰기는 소유 도메인만).
 
 ## 10. 대시보드·성과 리포트 (팀원3 · `tracking`)
 
@@ -563,6 +622,8 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 | `AUTH_INVALID_CREDENTIALS` | 401 | 이메일·비밀번호 불일치 |
 | `AUTH_ACCOUNT_LOCKED` | 401 | 5회 실패로 잠금 |
 | `AUTH_ACCOUNT_INACTIVE` | 401 | 비활성 계정 |
+| `MEMBER_DUPLICATE_EMAIL` | 409 | 이미 등록된 사용자 이메일 |
+| `MEMBER_SELF_CHANGE` | 400 | 자기 계정의 역할·활성 여부 변경 시도 |
 | `AUTH_FORBIDDEN` | 403 | 권한 없음 |
 | `AUTH_CSRF_INVALID` | 403 | CSRF 토큰 없음·불일치 |
 | `CUSTOMER_DUPLICATE_EMAIL` | 409 | 삭제되지 않은 고객 중 같은 이메일 존재 |
