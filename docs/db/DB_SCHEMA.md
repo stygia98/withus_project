@@ -509,6 +509,7 @@ PRD 7장에 없지만 구현에 필요해 추가했다. PRD 갱신 대상이다.
 | `send_log` | `recipient` | 테스트 발송(고객 없음)과 발송 시점 주소 기록 |
 | `consent_history` | `note` | 관리자가 수신거부를 해제할 때 증빙 메모 |
 | `campaign` | `created_by` | 작성자 추적 (다른 마스터 테이블과 일관성) |
+| `campaign` | `start_claimed_at` | 시작 선점 표시(V20). 동시에 `start()` 를 부르는 요청 중 한 명만 적재·시작하게 한다. NULL 이면 아무도 시작 중이 아님, 10분 넘은 값은 낡은 선점으로 무시 |
 
 ## 9. 시드 데이터 (`R__seed_local.sql`, local 프로필 전용)
 
