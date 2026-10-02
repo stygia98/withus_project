@@ -54,3 +54,25 @@ W3 "봇 판정 User-Agent 목록을 실제 메일로 검증·보강"은 W5로 �
 4. 2에서 `bot_yn = 'N'`으로 남은 자동 요청이 있으면, 그 UA 중 사람 요청과 겹치지 않는 고유 문자열만 키워드 후보로 PL에게 올린다(설정 변경은 `application.yml` 공용 파일).
 
 출처: [Microsoft Learn — Safe Links overview](https://learn.microsoft.com/en-us/defender-office-365/safe-links-about), [Postmark — Open Tracking and Apple Mail](https://postmarkapp.com/support/article/1257-open-tracking-and-apple-mail), [AWS Messaging Blog — Apple Mail iOS 15 Privacy Protection](https://aws.amazon.com/blogs/messaging-and-targeting/apple-mails-ios15-privacy-protection-impact-to-senders-2), [Suped — Google Image Proxy opens](https://www.suped.com/learn/email-deliverability/why-are-emails-showing-as-opened-with-google-image-proxy-ip-when-the-recipient-hasnt-opened-them), [ScientiaMobile — What is Google Image Proxy](https://scientiamobile.com/what-is-google-image-proxy/)
+
+## 5. 워크플로우 CONDITION 조회 검증 (W4 팀원2 지원, 2026-10-02)
+
+`docs/plans/workflow-plan.md` 3.2의 CONDITION(EMAIL_OPENED·EMAIL_CLICKED)은 직전 EMAIL `send_log` 1건을 골라 `TrackEventRepository.existsHumanEvent(sendLogId, "OPEN"|"CLICK")`로 판정한다. 시그니처는 Plan과 같다.
+
+**판정 규칙 (자동 테스트 `tracking/TrackEventRepositoryConditionTest`, `TrackingEventServiceTest`)**
+
+| 경우 | 결과 |
+|---|---|
+| SKIPPED·FAILED 건(이벤트 없음) | NO — PRD 6.5-4를 별도 분기 없이 만족 |
+| OPEN만 있음 | OPEN은 YES, CLICK은 NO |
+| 봇 이벤트만 있음 | NO |
+| 봇 이벤트 뒤에 사람 이벤트 | YES |
+| 앞 단계 메일의 클릭 | 직전 메일 판정에 섞이지 않음 (sendLogId 단위) |
+| TEST·NOTICE 발송의 사람 이벤트 | NO |
+
+**부하 확인 (로컬 PostgreSQL 17, 트랜잭션 안에서 생성 후 롤백)**
+
+- 데이터: `send_log` 10만 건, `track_event` 15만 건(OPEN 10만, CLICK 5만, 봇 섞음)
+- 1건 판정: `ix_track_event_send_log (send_log_id, event_type)` Index Scan + `send_log_pkey`, 실행 0.066ms
+- 엔진 한 번 처리분 500건 연속 판정: 1.9ms
+- 결론: CONDITION 조회에는 인덱스를 추가할 필요가 없다. 엔진 쪽 `findLatestSendLogId(instanceId, Channel.EMAIL)`도 `uq_send_log_step (instance_id, step_id)` 유니크 인덱스의 선두 컬럼으로 인스턴스 단위 조회가 된다(인스턴스당 send_log는 SEND 노드 수 이하)
