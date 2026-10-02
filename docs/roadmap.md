@@ -73,14 +73,14 @@
 
 **팀원2**
 - [ ] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함)
-- [ ] **공통 발송 큐**: PENDING 적재 → `SENDING` 선점 → 트랜잭션 밖 발송 → SENT/FAILED, 우선순위, 토큰 버킷 속도 제한
-- [ ] 발송 직전 재확인, 재시도(1·5·15분), `SENDING` 10분 초과 처리
-- [ ] 발송 시 렌더링: (광고)·발신자·수신거부 삽입, `PlaceholderRenderer`·`TrackingLinkService.rewrite` 연결
+- [x] **공통 발송 큐**: PENDING 적재 → `SENDING` 선점 → 트랜잭션 밖 발송 → SENT/FAILED, 우선순위, 토큰 버킷 속도 제한 (backend #21 — 우선순위는 kind 로 결정, 반송 BOUNCED 는 backend #32·#33, 적재 일괄 동의 판정 `filterSendable` 은 backend #42. SMS 수신처 NPE·테스트 4건은 이슈 #43)
+- [x] 발송 직전 재확인, 재시도(1·5·15분), `SENDING` 10분 초과 처리 (backend #21 — 결과 기록 UPDATE 상태 가드, 발송 성공 후 재시도 금지, 건별 실패 격리)
+- [x] 발송 시 렌더링: (광고)·발신자·수신거부 삽입, `PlaceholderRenderer`·`TrackingLinkService.rewrite` 연결 (backend #21 — 캠페인 발송 기준. TEST·NOTICE 렌더링은 `send_log.template_id` 추가 후 F-04·F-12 작업에서(#21 PL 결정 B), `{{region}}` 표시명은 backend #41 `Region.displayName()` 적용 대기)
 
 **팀원3**
 - [x] 치환자 렌더러 `PlaceholderRenderer`(`{{name|고객}}` 기본값, 시스템 기본값, 미리보기용 기본값 적용 수) + 단위 테스트 — 팀원2에서 이관 (backend #12, HTML 본문용 `renderHtml` 포함)
 - [x] 봇 판정(10초, User-Agent 키워드, 1초 내 전체 클릭) (backend #12)
-- [x] 메인 대시보드(카드, 활성 캠페인, 10초 폴링 이벤트 로그), 캠페인 성과 차트 (backend #12, frontend #3 — 활성 캠페인 카드는 팀원2 `GET /campaigns` 대기)
+- [x] 메인 대시보드(카드, 활성 캠페인, 10초 폴링 이벤트 로그), 캠페인 성과 차트 (backend #12, frontend #3 — 활성 캠페인 카드는 팀원2 `GET /campaigns` 대기, 기간 필터·쿠폰 발급 현황 backend #30·frontend #10)
 
 ### W3 — 워크플로우·수신거부·쿠폰
 
@@ -104,7 +104,7 @@
 **팀원3**
 - [x] 쿠폰 CRUD(정액·정률·상한, 고정 기간), 발급(`CouponService.issue`), `{{couponUrl}}` 연동 (backend #16, frontend #4 — 발급 멱등·원자적 사용 처리)
 - [x] 고객 쿠폰 페이지 `/c/[token]`(카드형, POST 사용 처리, 모바일 대응), 전환 집계 (backend #16, frontend #4)
-- [ ] 봇 판정 User-Agent 목록을 실제 메일로 검증·보강
+- [ ] 봇 판정 User-Agent 목록을 실제 메일로 검증·보강 — 공식 문서 사전 조사와 정상 UA 회귀 테스트 완료(메인 #10, backend #30), 판정 규칙을 부분 일치 + 사람 기기 예외 목록(`bot-user-agent-allow-list`)으로 정리(backend #38, 메인 #13), 실제 메일(Gmail·Outlook·Naver) 확인은 W5로 미룸(`docs/roles/member3-verification.md` 4장)
 
 ### W4 — AI·통합·기능 동결
 
@@ -124,8 +124,8 @@
 
 **팀원3**
 - [x] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장) (backend #16, frontend #4 — W4 항목 선행 완료)
-- [ ] 성과 리포트 마무리(단계별 차트, 전환율, A/B 비교) — 단계별·전환율 완료(backend #16, frontend #4), A/B 비교는 A/B 기능 결정 후
-- [ ] 여유 시 팀원2 워크플로우 안정화 지원(부하 데이터 생성, CONDITION 조회 검증)
+- [ ] 성과 리포트 마무리(단계별 차트, 전환율, A/B 비교) — 단계별·전환율 완료(backend #16, frontend #4), 기간 필터 완료(backend #30·#38, frontend #10·#13, 메인 #10·#13 — 366일 상한·서울 날짜 기준), A/B 비교는 A/B 기능 결정 후
+- [x] 여유 시 팀원2 워크플로우 안정화 지원(부하 데이터 생성, CONDITION 조회 검증) (backend #30, 메인 #10 — send_log 10만 건 기준 1건 판정 0.066ms, 인덱스 추가 불필요)
 
 ### W5 — 운영 배포와 시연
 
