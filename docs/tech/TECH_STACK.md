@@ -99,7 +99,8 @@ withus:
   tracking:
     base-url: ${WITHUS_PUBLIC_BASE_URL:http://localhost:8080}   # 운영: Amplify 주소 (메일 링크 기준)
     bot-click-seconds: 10
-    bot-user-agent-keywords: bot,crawler,spider,scanner,preview
+    bot-user-agent-keywords: bot,crawler,spider,scanner,preview   # 대소문자 무시, 부분 일치
+    bot-user-agent-allow-list: cubot   # 키워드를 포함하는 사람 기기명, 판정 전에 UA 에서 지운다
   send-window:
     start: "08:00"
     end: "20:50"
