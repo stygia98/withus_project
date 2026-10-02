@@ -138,7 +138,7 @@ withus:
     secure: false        # 로컬 http
 ```
 
-**운영 환경변수(커밋 금지)**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `HMAC_SECRET`, `TRACKING_IP_SALT`(추적 이벤트 IP 해시 솔트), `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`(가능하면 EC2 IAM 역할로 대체), `S3_BUCKET`, `SES_SNS_TOPIC_ARN`, `GEMINI_API_KEY`, `WITHUS_PUBLIC_BASE_URL`(Amplify 주소), `WITHUS_MAIL_FROM`(SES 인증 이메일), `OWNER_EMAIL`, `OWNER_PASSWORD`.
+**운영 환경변수(커밋 금지)**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `HMAC_SECRET`, `TRACKING_IP_SALT`(추적 이벤트 IP 해시 솔트), `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`(가능하면 EC2 IAM 역할로 대체), `S3_BUCKET`, `SES_TOPIC_ARN`(SES 반송·스팸신고 SNS 토픽, 비우면 웹훅이 모든 요청을 무시), `GEMINI_API_KEY`, `WITHUS_PUBLIC_BASE_URL`(Amplify 주소), `WITHUS_MAIL_FROM`(SES 인증 이메일), `OWNER_EMAIL`, `OWNER_PASSWORD`.
 
 ## 3. 프론트엔드
 
@@ -266,7 +266,7 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | 폼 라이브러리 | **react-hook-form + zod** (+ `@hookform/resolvers`) | 고객·쿠폰·캠페인 등 폼이 많음. `package.json` 추가 완료 |
 | TinyMCE 라이선스 | **TinyMCE 자체 설치, GPLv2+** (`license_key: 'gpl'`) | 저장소가 공개(GitHub public)라 GPL 소스 공개 의무 충족. Tiptap 대체 불필요 |
 | SES API | **`sesv2`** | List-Unsubscribe 헤더를 포함한 원시 메시지 전송 (W2, 팀원2) |
-| SNS 서명 검증 | **AWS SDK 제공 기능 우선**, 없으면 직접 구현 | W3, 팀원1 |
+| SNS 서명 검증 | **JDK(`java.security`·`HttpClient`)로 직접 구현** — AWS SDK 추가 없음 | W3, 팀원1 (backend #24, 검증 기준은 API_SPEC 9장) |
 | Gemini 모델 | **무료 등급의 가장 가벼운 텍스트 모델** | 모델명 `gemini-3.1-flash-lite`와 무료 등급 한도(RPM 15·TPM 250K·RPD 500) 확인, 5장에 기록 완료 (팀원3, 2026-10-01) |
 | 자동 포맷터 | **프론트 Prettier만** | `.prettierrc`(printWidth 100), `npm run format` / `format:check`, ESLint와 충돌 방지(`eslint-config-prettier`). 백엔드는 IntelliJ 기본 |
 | 로컬 DB 비밀번호 | **`infra/.env`에서 읽음** (파일에 직접 쓰지 않음) | CLAUDE.md 7장 "비밀값은 환경변수로만"과 일치. `.env.example` 복사 후 사용 |
