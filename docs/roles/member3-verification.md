@@ -37,7 +37,11 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 ## 4. 봇 판정 User-Agent 사전 조사 (2026-10-01)
 
 W3 "봇 판정 User-Agent 목록을 실제 메일로 검증·보강"은 W5로 미뤘고, 그 전에 공식 문서·공개 자료로 확인한 내용이다.
-**확인된 근거만으로는 키워드(`bot,crawler,spider,scanner,preview`)에 추가할 것이 없다.** 추측으로 넣으면 사람의 열람을 지울 위험이 있다.
+**확인된 근거만으로는 키워드(`bot,crawler,spider,scanner,preview`)에 추가할 것이 없다.** 판정 규칙(backend #38, `BotDetector`·`BotUserAgentConfigTest`):
+- 키워드는 대소문자를 무시한 **부분 일치**다. `Googlebot`·`GOOGLEBOT`·`AhrefsBot`·`acme-crawlers`·`SecurityScanner` 모두 봇이다.
+- 키워드를 우연히 포함하는 **사람 기기명은 예외 목록**(`withus.tracking.bot-user-agent-allow-list`, 기본 `cubot`)에 두고, 판정 전에 UA에서 지운다. `Android 10; CUBOT X30`·`Cubot_KingKong`은 사람이다. 대소문자 모양으로 사람·봇을 추측하지 않는다.
+- 한계: 예외 목록에 없는 기기명은 키워드를 포함하면 봇으로 판정된다(예: `Talbot`). 실메일 확인(아래 절차)이나 운영 중 사람 UA가 봇으로 잡히면 그 기기명을 예외 목록에 추가한다.
+- 운영에서 키워드를 환경변수로 바꿀 때는 **부분 일치**라는 점을 기준으로 고른다. 너무 짧거나 흔한 문자열(예: `google`, `proxy`)은 사람 열람까지 지운다. 추측으로 넣으면 사람의 열람을 지울 위험이 있다.
 현재 목록이 아래 정상 요청을 봇으로 판정하지 않는다는 것은 `tracking/BotUserAgentConfigTest`(실제 설정 사용)로 고정했다.
 
 | 대상 | 동작 | User-Agent | 판정 방침 |

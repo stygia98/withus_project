@@ -494,9 +494,9 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - 발송 시도 `attempted` = `SENT` + `BOUNCED` + `FAILED` (`SKIPPED`·`PENDING`·`SENDING`은 제외), 발송 성공 `sent` = `SENT`
 - `uniqueOpens`·`uniqueClicks` = 성공 발송 중 사람 이벤트가 있는 **고유 고객 수**, `couponUsed` = 성공 발송으로 받은 쿠폰을 사용한 고유 고객 수
 - 성공률 = sent / attempted, 오픈율·클릭률·전환율 = 고유 고객 수 / sent. 비율은 0~1, 소수 넷째 자리 반올림, 분모가 0이면 0
-- 기간은 발송 시각(`sent_at`, 실패 건은 마지막 처리 시각) 기준, 한국 시간 날짜. 오픈·클릭은 발생 시각과 관계없이 해당 발송 건에 귀속
+- 기간은 발송 시각(`sent_at`, 실패 건은 적재 시각 `created_at`) 기준, 한국 시간 날짜. 실패 건을 마지막 처리 시각으로 보면 이후 처리 때마다 날짜가 바뀌어 같은 기간 조회 결과가 달라지므로 쓰지 않는다. 오픈·클릭은 발생 시각과 관계없이 해당 발송 건에 귀속
 
-**캠페인 성과 기간 필터 (PRD F-09)** — `/analytics/campaigns/{id}`와 `/steps`는 `from`·`to`(`YYYY-MM-DD`, 발송일 기준 한국 날짜, 양 끝 포함)를 각각 생략할 수 있다. 생략한 쪽은 제한이 없고, 둘 다 없으면 캠페인 전체 기간이다. 응답에 요청한 `from`·`to`를 그대로 넣는다(없으면 `null`). `from > to`면 `COMMON_INVALID_INPUT`(400). AI-03 요약은 항상 전체 기간이다.
+**캠페인 성과 기간 필터 (PRD F-09)** — `/analytics/campaigns/{id}`와 `/steps`는 `from`·`to`(`YYYY-MM-DD`, 발송일 기준 한국 날짜, 양 끝 포함)를 각각 생략할 수 있다. 생략한 쪽은 제한이 없고, 둘 다 없으면 캠페인 전체 기간이다. 응답에 요청한 `from`·`to`를 그대로 넣는다(없으면 `null`). `from > to`이거나 기간이 366일을 넘으면 `COMMON_INVALID_INPUT`(400, 대시보드 요약과 같은 상한). `to`만 생략하면 오늘(한국 날짜)까지로 세어 상한을 적용하고, `from`을 생략하면 캠페인 전체 기간이라 상한이 없다. 기간 검증은 캠페인 존재 확인보다 먼저라, 없는 캠페인이어도 기간이 잘못되면 400이다. AI-03 요약은 항상 전체 기간이다.
 
 **GET /analytics/campaigns/{campaignId}/steps 응답 data**
 
