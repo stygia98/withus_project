@@ -65,9 +65,9 @@ src/main/resources/
 ├─ application-local.yml       로컬 (docker compose, Mailpit, 로컬 디스크, SMS Mock)
 ├─ application-prod.yml        운영 (RDS, SES, S3) — 비밀값은 환경변수 (W5 작성)
 ├─ mapper/{domain}/*.xml
-└─ db/migration/
-   ├─ V1__init.sql
-   └─ local/R__seed_local.sql   (local 프로필에서만 locations에 포함, 반복 실행 마이그레이션)
+├─ db/migration/               운영·로컬 공통. Flyway 가 하위 폴더까지 재귀로 스캔하므로 시드를 두지 않는다 (이슈 #46)
+│  └─ V1__init.sql
+└─ db/seed/local/R__seed_local.sql   (local 프로필에서만 locations에 포함, 반복 실행 마이그레이션)
 ```
 
 아래는 요약이다. **실제 기준은 `withus_backend/src/main/resources/application.yml`** 이다.
@@ -127,7 +127,7 @@ spring:
     host: localhost
     port: 1025
   flyway:
-    locations: classpath:db/migration,classpath:db/migration/local
+    locations: classpath:db/migration,classpath:db/seed/local
 withus:
   storage:
     type: local
