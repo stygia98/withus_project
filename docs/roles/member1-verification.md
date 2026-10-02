@@ -45,6 +45,28 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 
 7은 캠페인 발송(팀원2 #31) 병합 후 실제 메일로 확인한다. 그 전에는 `UnsubscribeApiTest`(서명된 토큰으로 GET/POST) 결과로 대신한다. 수동 확인 결과는 아래에 날짜와 함께 남긴다(task20).
 
+## 4. 운영 재검증 전 준비 (W5)
+
+배포는 PL 이 하고, 고객 구간이 동작하려면 아래가 맞아야 한다.
+
+**환경변수**
+- `SES_TOPIC_ARN` — SES 반송·스팸신고 SNS 토픽 ARN. **비우면 웹훅이 모든 요청을 무시**한다(로그 `SES 웹훅: 등록하지 않은 토픽 무시`). `TECH_STACK.md` 의 옛 이름 `SES_SNS_TOPIC_ARN` 은 쓰지 않는다(withus_project #18)
+- `HMAC_SECRET` — 수신거부 토큰 서명 키, 32자 이상, 운영 필수. 바꾸면 그 전에 나간 메일의 수신거부 링크가 모두 "유효하지 않은 링크"가 된다
+- `WITHUS_SCHEDULER_CONSENT_NOTICE_ENABLED` — F-12 배치. 기본 `false`. 팀원2 NOTICE 렌더링이 병합되고 local Mailpit 확인(task24)이 끝난 뒤 `true`
+
+**SES → SNS → 웹훅 연결 (PL)**
+1. SES 인증 발신 주소의 **Feedback notifications** 에서 Bounce·Complaint 를 SNS 토픽으로 보낸다(backend #24 PL 리뷰)
+2. 토픽에 HTTPS 구독 `https://<Amplify 주소>/api/webhooks/ses` 추가 — Next.js rewrites `/api/*` 가 백엔드로 넘긴다
+3. **Raw message delivery 는 끈다.** 웹훅은 SNS 봉투(`Type`·`Message`·`Signature` …)의 서명을 검증한다
+4. 구독 확인: 백엔드 로그 `SES 웹훅: SNS 구독 확인 완료 topic=…` 이 남고 SNS 콘솔 구독 상태가 Confirmed. 실패 로그는 `SNS 가 아닌 SubscribeURL 무시`, `서명 정보가 올바르지 않은 요청 무시`, `서명 불일치 요청 무시`
+
+**데이터**
+- local 시드(`R__seed_local.sql`)가 운영 DB 에 들어가지 않았는지 — 운영 `flyway_schema_history` 에 `seed local` 행이 없어야 한다(backend 이슈 #46)
+- 운영 DB 는 직접 수정하지 않는다(CLAUDE.md 9장). 시연 고객은 `/customers` 업로드로만 넣는다(task22 파일)
+- SES 샌드박스라 메일을 받을 고객은 PL 이 인증한 주소만 쓴다
+
+**확인 순서**: 4장 준비 → 시연 데이터 업로드 → 1장 "운영 확인" 열 → 2장(팀원2 캠페인 발송 후) → 3장 7번 수신거부 링크 → SES 반송·스팸신고 실연동
+
 ### 수동 확인 결과
 
 | 날짜 | 확인한 # | 결과 |
