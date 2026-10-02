@@ -519,7 +519,8 @@ PRD 7장에 없지만 구현에 필요해 추가했다. PRD 갱신 대상이다.
 
 - OWNER 계정은 시드가 아니라 애플리케이션 시작 시 환경변수로 1개 생성한다.
 - 로컬 시연용: 고객 100명(지역·나이·구매액 분포), 세그먼트 2개, 템플릿 3개(메일 2, SMS 1), 쿠폰 2개(정액·정률).
-- 파일: `withus_backend/src/main/resources/db/migration/local/R__seed_local.sql`
+- 파일: `withus_backend/src/main/resources/db/seed/local/R__seed_local.sql`
+- **`db/migration` 아래(하위 폴더 포함)에 두면 안 된다.** Flyway 는 location 을 하위 폴더까지 재귀로 스캔하므로, 운영(`locations: classpath:db/migration`)에도 시드가 적용된다(이슈 #46에서 확인: 운영 설정으로 빈 DB 를 마이그레이션하면 고객 100명이 생성됨). 시드는 `db/seed/local` 에 두고 `application-local.yml` 의 `locations` 에만 추가한다. 백엔드 `FlywayLocationTest` 가 이를 확인한다.
 - **시드 작성자 계정** `seed@withus.local`(STAFF, 비활성, 로그인 불가): Flyway가 OWNER 생성(앱 시작 후)보다 먼저 실행되므로 세그먼트·템플릿의 `created_by` 용으로 시드가 만든다. OWNER가 아니라 최초 OWNER 생성에는 영향이 없다.
 - 고객 데이터 구성 (테스트 시나리오용):
 
