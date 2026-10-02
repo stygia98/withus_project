@@ -192,7 +192,7 @@ rule 형식은 `docs/db/DB_SCHEMA.md` 5.1.
 | PUT | `/api/v1/templates/{templateId}` | O M S | 수정 (사용 중이면 409) |
 | DELETE | `/api/v1/templates/{templateId}` | O M S | 삭제 (참조 중이면 409) |
 | POST | `/api/v1/templates/{templateId}/duplicate` | O M S | 복제 |
-| POST | `/api/v1/templates/{templateId}/preview` | O M S | 렌더링 미리보기 |
+| POST | `/api/v1/templates/{templateId}/preview` | O M S | 렌더링 미리보기 (STAFF 는 `sampleCustomerId` 무시, 고정 샘플 값 사용) |
 | POST | `/api/v1/templates/{templateId}/test-send` | O M S | 테스트 발송 1건 |
 | POST | `/api/v1/files/images` | O M S | 이미지 업로드 (5MB, jpg/png/gif) |
 
@@ -213,11 +213,16 @@ rule 형식은 `docs/db/DB_SCHEMA.md` 5.1.
 **POST /templates/{id}/preview**
 
 ```json
-// 요청 (segmentId가 있으면 기본값으로 나갈 인원도 계산)
+// 요청 (segmentId가 있으면 기본값으로 나갈 인원도 계산, sampleCustomerId 는 O·M 만 사용 — STAFF 는 보내도 무시하고 고정 샘플 값으로 미리보기)
 { "sampleCustomerId": 1024, "segmentId": 7 }
-// 응답 data
-{ "subject": "(광고) 김민지님께 드리는 가을 선물", "html": "...", "smsBytes": null, "defaultValueCount": { "total": 12480, "usingDefault": 312 } }
+// 응답 data (메일)
+{ "subject": "(광고) 김민지님께 드리는 가을 선물", "html": "...", "text": null, "smsBytes": null, "smsType": null, "defaultValueCount": { "total": 12480, "usingDefault": 312 } }
+// 응답 data (SMS): subject·html 은 null, text 는 평문(이스케이프 없음)
+{ "subject": null, "html": null, "text": "(광고)위드어스 ...", "smsBytes": 62, "smsType": "SMS", "defaultValueCount": null }
 ```
+
+- `smsBytes` 는 (광고)·발신자·수신거부 문구를 포함한 값이며 ASCII 1바이트, 그 외 2바이트로 센다. 90바이트 초과면 `smsType` 이 `LMS` 다.
+- `defaultValueCount.total` 은 삭제 고객을 뺀 실제로 센 인원이다. 기본값 문법(`{{name|고객}}`)이 없는 템플릿은 `usingDefault` 가 0 이다.
 
 **POST /templates/{id}/test-send**
 
