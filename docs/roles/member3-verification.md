@@ -37,7 +37,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 ## 4. 봇 판정 User-Agent 사전 조사 (2026-10-01)
 
 W3 "봇 판정 User-Agent 목록을 실제 메일로 검증·보강"은 W5로 미뤘고, 그 전에 공식 문서·공개 자료로 확인한 내용이다.
-**확인된 근거만으로는 키워드(`bot,crawler,spider,scanner,preview`)에 추가할 것이 없다.** 추측으로 넣으면 사람의 열람을 지울 위험이 있다.
+**확인된 근거만으로는 키워드(`bot,crawler,spider,scanner,preview`)에 추가할 것이 없다.** 키워드는 대소문자를 무시하되 **단어 끝에 올 때만** 맞는 것으로 본다(Googlebot·AhrefsBot·SecurityScanner 는 봇, `Android 10; CUBOT X30`·Robotics 같은 사람 기기는 아님 — backend #30 리뷰, `BotUserAgentConfigTest`). 추측으로 넣으면 사람의 열람을 지울 위험이 있다.
 현재 목록이 아래 정상 요청을 봇으로 판정하지 않는다는 것은 `tracking/BotUserAgentConfigTest`(실제 설정 사용)로 고정했다.
 
 | 대상 | 동작 | User-Agent | 판정 방침 |
