@@ -459,7 +459,8 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 | `CUSTOMER_DUPLICATE_EMAIL` | 409 | 삭제되지 않은 고객 중 같은 이메일 존재 |
 | `CUSTOMER_INVALID_REGION` / `_PHONE` / `_DATE` | 400 | 정규화 실패 |
 | `CUSTOMER_CONSENT_EVIDENCE_REQUIRED` | 422 | 수신거부 해제에 증빙 메모 필요 |
-| `UPLOAD_FILE_TOO_LARGE` / `_TOO_MANY_ROWS` / `_INVALID_HEADER` | 400 | 업로드 제한 |
+| `UPLOAD_FILE_TOO_LARGE` / `_TOO_MANY_ROWS` / `_INVALID_HEADER` | 400 | 업로드 제한 (고객 CSV 5MB, 이미지도 공용) |
+| `FILE_INVALID_TYPE` | 400 | 이미지 업로드 형식 오류 (jpg·png·gif 아님) |
 | `SEGMENT_INVALID_RULE` / `_TOO_MANY_CONDITIONS` | 400 | 조건 오류 |
 | `SEGMENT_IN_USE` | 409 | 캠페인이 참조 중 |
 | `TEMPLATE_IN_USE` | 409 | 예약·활성·일시정지 캠페인이 사용 중 |
