@@ -51,7 +51,7 @@
 - [x] **(W1 최우선)** `SegmentService`·`ConsentService` 임시 구현(stub) 먼저 병합 — 팀원2가 기다리지 않게 → stub 대신 실제 구현으로 대체: `ConsentService`(backend #5), `SegmentService` 1차(backend #3)
 
 **팀원2**
-- [ ] 템플릿 CRUD API·화면(최소 기능), TinyMCE 연동, `FileStorage`(로컬) 이미지 업로드 — API·이미지 업로드 완료(backend #7), 화면·TinyMCE는 PL 레이아웃 이후
+- [x] 템플릿 CRUD API·화면(최소 기능), TinyMCE 연동, `FileStorage`(로컬) 이미지 업로드 — API·이미지 업로드(backend #7), 화면·TinyMCE(frontend #11), 렌더링 미리보기 API(backend #47), 광고 문구 직접 입력 금지 검증(backend #57). 후속(frontend #11 🔵7~10, `copy-tinymce` 정리)은 W5 배포 전
 - [x] `MessageSender` 인터페이스 + SMTP(Mailpit) 구현, SMS Mock (backend #7)
 - [x] **발송 큐 설계 Plan 작성 → PL 리뷰** (W2 착수 전 승인) — 승인 완료(backend #4, 승인 결과 #6)
 
@@ -72,7 +72,8 @@
 - [x] 세그먼트 조건 빌더: 규칙 JSON → MyBatis 동적 SQL(화이트리스트), 대상 수 미리보기 + 단위 테스트 (backend #3·#8, frontend #2 — 10만 명 미리보기 최대 37ms)
 
 **팀원2**
-- [ ] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함)
+- [ ] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함) — API 완료(backend #31, 시작 경합 #54·재시작 경로 #55 보강), 화면은 frontend #15 리뷰 중
+- [ ] 템플릿 테스트 발송 API(F-04, `kind = TEST`, 통계 제외) — backend #60 (PRD 10.3 완료 기준 "테스트 발송은 대시보드 통계에 잡히지 않는다")
 - [x] **공통 발송 큐**: PENDING 적재 → `SENDING` 선점 → 트랜잭션 밖 발송 → SENT/FAILED, 우선순위, 토큰 버킷 속도 제한 (backend #21 — 우선순위는 kind 로 결정, 반송 BOUNCED 는 backend #32·#33, 적재 일괄 동의 판정 `filterSendable` 은 backend #42. SMS 수신처 NPE·테스트 4건은 이슈 #43)
 - [x] 발송 직전 재확인, 재시도(1·5·15분), `SENDING` 10분 초과 처리 (backend #21 — 결과 기록 UPDATE 상태 가드, 발송 성공 후 재시도 금지, 건별 실패 격리)
 - [x] 발송 시 렌더링: (광고)·발신자·수신거부 삽입, `PlaceholderRenderer`·`TrackingLinkService.rewrite` 연결 (backend #21 — 캠페인 발송 기준. TEST·NOTICE 렌더링은 `send_log.template_id` 추가 후 F-04·F-12 작업에서(#21 PL 결정 B), `{{region}}` 표시명은 backend #41 `Region.displayName()` 적용 대기)
@@ -97,9 +98,10 @@
 
 **팀원2**
 - [x] 워크플로우 엔진 설계 Plan → PL 승인 (backend #20, 승인 결과는 `docs/plans/workflow-plan.md` 11장)
-- [ ] 워크플로우 빌더(폼 기반) + 구조 검증(분기 2단계, 노드 15개, 순환 금지, SEND 노드별 쿠폰)
-- [ ] 워크플로우 엔진: 500건 반복 처리, WAIT(`sent_at` 기준), CONDITION(봇 제외), 멈춤 복구, 멱등성
-- [ ] 캠페인 상태 전이(DRAFT/SCHEDULED/ACTIVE/PAUSED/COMPLETED), 일시정지 시 PENDING 보류
+- [ ] 워크플로우 빌더(폼 기반) + 구조 검증(분기 2단계, 노드 15개, 순환 금지, SEND 노드별 쿠폰) — 구조 검증 API 완료(backend #34·#56), 빌더 화면은 frontend #15 리뷰 중
+- [ ] 워크플로우 엔진: 500건 반복 처리, WAIT(`sent_at` 기준), CONDITION(봇 제외), 멈춤 복구, 멱등성 — backend #35 리뷰 중
+- [ ] 캠페인 상태 전이(DRAFT/SCHEDULED/ACTIVE/PAUSED/COMPLETED), 일시정지 시 PENDING 보류 — backend #35 에 포함(리뷰 중)
+- [ ] 캠페인 복제 API(PRD 6.7 "일시정지 후 복제") — backend #62
 
 **팀원3**
 - [x] 쿠폰 CRUD(정액·정률·상한, 고정 기간), 발급(`CouponService.issue`), `{{couponUrl}}` 연동 (backend #16, frontend #4 — 발급 멱등·원자적 사용 처리)
@@ -115,16 +117,16 @@
 - [ ] 운영 배포 스크립트 준비(`infra/aws/`), 배포 리허설(Amplify → EC2 프록시 확인)
 
 **팀원1**
-- [ ] 수신동의 2년 확인 안내(F-12, NOTICE 발송·시간 제한)
+- [x] 수신동의 2년 확인 안내(F-12, NOTICE 발송·시간 제한) (backend #40·#49 — 쿨다운 30일 PL 확정)
 - [ ] 버그 수정
 
 **팀원2**
 - [ ] 워크플로우 안정화(10만 건 적재 부하 확인, 우선순위 검증)
-- [ ] (선택) A/B 테스트, React Flow 캔버스
+- [ ] (선택) React Flow 캔버스 — A/B 테스트는 범위에서 제외(PL 결정 2026-10-06, 메인 #12)
 
 **팀원3**
 - [x] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장) (backend #16, frontend #4 — W4 항목 선행 완료)
-- [ ] 성과 리포트 마무리(단계별 차트, 전환율, A/B 비교) — 단계별·전환율 완료(backend #16, frontend #4), 기간 필터 완료(backend #30·#38, frontend #10·#13, 메인 #10·#13 — 366일 상한·서울 날짜 기준), A/B 비교는 A/B 기능 결정 후
+- [x] 성과 리포트 마무리(단계별 차트, 전환율, 기간 필터, 성과 리포트 목록 `/analytics`) — 단계별·전환율 완료(backend #16, frontend #4), 기간 필터 완료(backend #30·#38, frontend #10·#13, 메인 #10·#13 — 366일 상한·서울 날짜 기준), 목록 `/analytics`는 frontend #16. A/B 비교는 A/B 기능 제외로 뺌(PL 결정 2026-10-06, 메인 #12)
 - [x] 여유 시 팀원2 워크플로우 안정화 지원(부하 데이터 생성, CONDITION 조회 검증) (backend #30, 메인 #10 — send_log 10만 건 기준 1건 판정 0.066ms, 인덱스 추가 불필요)
 
 ### W5 — 운영 배포와 시연
@@ -138,7 +140,7 @@
 
 **팀원1·2·3**
 - [ ] 각자 구간의 10.3 완료 기준을 운영 환경에서 재검증
-- [ ] 시연 데이터 준비, 발견된 버그 수정
+- [ ] 시연 데이터 준비(local 시드에 발송·이벤트 예시 추가 — `db/seed/local/R__seed_demo.sql`, 팀원3 PR, 메인 #12 결정), 발견된 버그 수정
 
 ## 4. 주요 의존 관계
 
