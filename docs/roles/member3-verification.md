@@ -28,11 +28,42 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 | 관리자가 구매를 등록하면 누적구매액이 늘고 … | `CouponService.markUsed` (미사용만 확인, 기간은 구매일로 호출 쪽 판정) | `CouponPurchaseDateTest` | 팀원1 (구매 등록·누적구매액·`PURCHASE_GTE`) |
 | W5에 프로필 변경만으로 운영 환경에서 위 시나리오가 동작한다 | `withus.ai.type`(gemini/mock), `TRACKING_IP_SALT`, `withus.tracking.base-url` | `ai/AiConfigTest` | PL (배포) |
 
-## 3. 운영 재검증 전 준비
+## 3. W5 운영 재검증 점검표
 
-- 환경변수: `GEMINI_API_KEY`, `TRACKING_IP_SALT`, `WITHUS_AI_TYPE=gemini`(운영 기본값), `withus.tracking.base-url` = 운영 프론트 주소
-- 봇 판정 User-Agent 목록은 W5에 실제 메일(Gmail·Outlook·Naver)로 검증·보강한다 (W3에서 미룸, 2026-10-01 결정). 사전 조사와 확인 절차는 4장
-- Gemini 무료 등급 한도(RPM 15·RPD 500, TECH_STACK 5장) 안에서 시연한다. AI-02 근거 문장은 한도 초과 시 서버 문장으로 대신 나간다
+### 3.1 배포 전 설정 (팀원3 구간이 읽는 값)
+
+기준은 `withus_backend/src/main/resources/application.yml`이다. 아래 값은 **비어 있어도 서버가 뜬다.** 그래서 기동이 됐다고 설정이 맞는 것은 아니며, 3.2의 확인으로 잡아야 한다.
+
+| 환경변수 | 운영 값 | 비어 있거나 틀리면 | 확인 (3.2) |
+|---|---|---|---|
+| `WITHUS_PUBLIC_BASE_URL` | Amplify 주소 (`https://…`, 끝에 `/` 없이) | 기본값 `http://localhost:8080`으로 메일이 나가, 수신자 쪽에서 오픈 픽셀·추적 링크·쿠폰 링크(`/c/…`)가 모두 열리지 않는다 | 2번 |
+| `TRACKING_IP_SALT` | 32자 이상 임의 문자열 (비밀값) | 솔트 없이 IP를 해시한다. 판정에는 쓰지 않지만 해시가 쉽게 역산된다 | 배포 전 값 존재 확인 |
+| `GEMINI_API_KEY` | AI Studio 키 (비밀값) | 기동은 되고, AI-01·02·03을 호출하면 `AI_UNAVAILABLE`, 로그 `GEMINI_API_KEY 가 설정되지 않아…` | 8번 |
+
+- `withus.ai.type`은 `application.yml`에 `gemini`로 고정되어 있다. `WITHUS_AI_TYPE`은 `application-local.yml`에서만 읽으므로 **운영(prod)에서는 넣어도 효과가 없다.**
+- 봇 판정 키워드와 예외 목록은 기본값 그대로 배포한다. 4장 확인 결과로 바꿔야 하면 환경변수 `WITHUS_TRACKING_BOTUSERAGENTKEYWORDS`, `WITHUS_TRACKING_BOTUSERAGENTALLOWLIST`(Spring 완화 바인딩, 쉼표 구분)로 넣거나 `application.yml`을 고치는 PR을 올린다. 키워드는 부분 일치라는 점(4장)을 기준으로 고른다.
+
+### 3.2 운영 확인 순서
+
+운영 SES와 인증된 수신 주소를 쓴다. 3번까지는 다른 구간 발송이 연결된 뒤 바로 하고, 나머지는 시연 전날 다시 한다.
+
+| # | 확인 | 기대 결과 | 관련 1·2장 항목 |
+|---|---|---|---|
+| 1 | Amplify 주소로 `/t/o/{임의 UUID}.gif`, `/t/c/{임의 UUID}/1` 열기 | 각각 200 gif, 302 리다이렉트. `track_event`에 새 행 없음. Amplify → EC2 `/t/*` 프록시와 위조 토큰 규칙이 함께 확인된다 | 토큰을 바꾸면 이벤트 없음 |
+| 2 | 테스트 발송 1통 → 받은 메일 원문(HTML) 보기 | 픽셀·링크가 `WITHUS_PUBLIC_BASE_URL/t/…`로 시작한다. 수신거부·쿠폰 링크는 추적 주소로 바뀌지 않는다. 대시보드 숫자 변화 없음 | 링크 치환 제외, TEST 제외 |
+| 3 | 4장 실제 메일 확인 절차 (Gmail·Outlook·네이버) | 자동 요청의 UA·`bot_yn`·경과 시간 기록. 사람 열람·클릭은 `bot_yn = 'N'` | 봇 판정 |
+| 4 | 캠페인 메일을 열고 링크 클릭 | 10초 폴링 안에 대시보드 오픈·클릭과 최근 이벤트에 반영 | 오픈·클릭 반영 |
+| 5 | 발송 직후 10초 안에 링크 클릭 | `bot_yn = 'Y'`, 클릭 수는 그대로 | 10초 봇 |
+| 6 | 휴대폰에서 쿠폰 링크 열기 → 사용하기 → 다시 누르기 | 열기만 하면 사용 가능 상태 유지, 사용 확정 후 다시 누르면 "이미 사용". `/analytics/[id]` 전환율 반영 | 쿠폰 1회 사용·전환율 |
+| 7 | 고객 상세에서 쿠폰을 골라 구매 등록 (팀원1과) | 전환율 반영, 기간 밖 구매일이면 거절 | 구매 등록 전환 |
+| 8 | AI-01·02·03 각 1회 | 문구 3안, 추천 시간, 성과 요약. 호출 전 AI Studio에서 남은 일일 한도 확인 | AI 3기능 |
+| 9 | AI-02에 대상 수를 크게 넣기 | 끝나는 시각이 20:50을 넘는 후보가 빠짐 | 시간 가드레일 |
+| 10 | 이름 없는 시드 고객에게 발송 | "안녕하세요 고객님" | 렌더러 기본값 |
+| 11 | 서로 다른 기기 두 대로 같은 메일 열기 | `track_event.ip_hash`가 서로 다르다. 같으면 서버가 Amplify 프록시 IP를 보고 있다는 뜻이다 | 아래 참고 |
+
+- 11번 참고: 추적 API는 `request.getRemoteAddr()`로 IP를 읽는다. `ip_hash`는 저장만 하고 봇 판정·지표에는 쓰지 않으므로, 프록시 IP가 찍혀도 1~10번 결과에는 영향이 없다. 같은 값이 나오면 결과만 PL에게 공유하고, 프록시 헤더 처리 방식(배포 설정)은 PL이 정한다.
+- Gemini 무료 등급 한도(RPM 15·RPD 500, TECH_STACK 5장) 안에서 시연한다. 한도는 태평양 시간 자정에 초기화된다. AI-02 근거 문장은 한도를 넘으면 서버 문장으로 대신 나간다.
+- 확인 결과(날짜, 통과 여부, 3번의 UA 기록)는 이 문서 4장 아래에 덧붙이고, 키워드를 바꿔야 하면 PL에게 GitHub로 올린다.
 
 ## 4. 봇 판정 User-Agent 사전 조사 (2026-10-01)
 
@@ -80,3 +111,17 @@ W3 "봇 판정 User-Agent 목록을 실제 메일로 검증·보강"은 W5로 �
 - 1건 판정: `ix_track_event_send_log (send_log_id, event_type)` Index Scan + `send_log_pkey`, 실행 0.066ms
 - 엔진 한 번 처리분 500건 연속 판정: 1.9ms
 - 결론: CONDITION 조회에는 인덱스를 추가할 필요가 없다. 엔진 쪽 `findLatestSendLogId(instanceId, Channel.EMAIL)`도 `uq_send_log_step (instance_id, step_id)` 유니크 인덱스의 선두 컬럼으로 인스턴스 단위 조회가 된다(인스턴스당 send_log는 SEND 노드 수 이하)
+
+**엔진 단위 대량 판정 (backend #35 헤드 `4e4c3f3` + dev, 로컬, 롤백 트랜잭션, 2026-10-02)**
+
+인스턴스 N개가 CONDITION 앞에서 한꺼번에 실행 시각이 된 상황을 만들고 `WorkflowScheduler.dispatch()`를 그대로 돌렸다. 구조는 `CONDITION(EMAIL_OPENED | EMAIL_CLICKED)` → yes: `WAIT(1일)` → END / no: END. 시나리오 9종(사람·봇, 오픈만, FAILED, 예전 메일에만 반응, 메일 뒤 SMS, SMS만)을 두 조건에 나눠 넣었다. 결과는 backend #35 코멘트에 올렸다.
+
+| N | 오판정 | `dispatch()` | 인스턴스당 |
+|---|---|---|---|
+| 2,000 | 0 | 8.2초 | 4.1ms |
+| 5,000 | 0 | 19.0초 | 3.8ms |
+| 20,000 | 0 | 100.7초 | 5.0ms |
+
+- RUNNING으로 남은 인스턴스는 없다. 두 조회는 모두 인덱스를 탄다(약 0.04ms).
+- 시간은 대부분 DB 왕복(인스턴스당 약 5회)이다. 스케줄러가 `fixedDelay`라 처리가 길어도 주기가 겹치지 않고, 500건 단위로 선점해 RUNNING 10분 복구에도 걸리지 않는다. 몰린 건의 뒤쪽이 늦게 처리될 뿐 판정은 바뀌지 않는다.
+- #35가 dev에 병합되면 같은 검증을 dev에서 한 번 더 돌린다(backend #51).
