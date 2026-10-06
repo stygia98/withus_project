@@ -72,8 +72,8 @@
 - [x] 세그먼트 조건 빌더: 규칙 JSON → MyBatis 동적 SQL(화이트리스트), 대상 수 미리보기 + 단위 테스트 (backend #3·#8, frontend #2 — 10만 명 미리보기 최대 37ms)
 
 **팀원2**
-- [ ] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함) — API 완료(backend #31, 시작 경합 #54·재시작 경로 #55 보강), 화면은 frontend #15 리뷰 중
-- [ ] 템플릿 테스트 발송 API(F-04, `kind = TEST`, 통계 제외) — backend #60 (PRD 10.3 완료 기준 "테스트 발송은 대시보드 통계에 잡히지 않는다")
+- [x] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함) (backend #31, 시작 경합 #54·재시작 경로 #55 보강, 화면 frontend #15). 후속: 10만 건 시작이 요청 안에서 동기 적재라 DB 왕복이 느린 환경에서 61~64초(이슈 #73, W5 리허설 전 확인)
+- [x] 템플릿 테스트 발송 API(F-04, `kind = TEST`, 통계 제외) (backend #69 — 실제 서버로 EMAIL·SMS 발송 후 대시보드 통계 불변 확인, PRD 10.3 "테스트 발송은 대시보드 통계에 잡히지 않는다")
 - [x] **공통 발송 큐**: PENDING 적재 → `SENDING` 선점 → 트랜잭션 밖 발송 → SENT/FAILED, 우선순위, 토큰 버킷 속도 제한 (backend #21 — 우선순위는 kind 로 결정, 반송 BOUNCED 는 backend #32·#33, 적재 일괄 동의 판정 `filterSendable` 은 backend #42. SMS 수신처 NPE·테스트 4건은 이슈 #43)
 - [x] 발송 직전 재확인, 재시도(1·5·15분), `SENDING` 10분 초과 처리 (backend #21 — 결과 기록 UPDATE 상태 가드, 발송 성공 후 재시도 금지, 건별 실패 격리)
 - [x] 발송 시 렌더링: (광고)·발신자·수신거부 삽입, `PlaceholderRenderer`·`TrackingLinkService.rewrite` 연결 (backend #21 — 캠페인 발송 기준. TEST·NOTICE 렌더링은 `send_log.template_id` 추가 후 F-04·F-12 작업에서(#21 PL 결정 B), `{{region}}` 표시명은 backend #41 `Region.displayName()` 적용 대기)
@@ -98,9 +98,9 @@
 
 **팀원2**
 - [x] 워크플로우 엔진 설계 Plan → PL 승인 (backend #20, 승인 결과는 `docs/plans/workflow-plan.md` 11장)
-- [ ] 워크플로우 빌더(폼 기반) + 구조 검증(분기 2단계, 노드 15개, 순환 금지, SEND 노드별 쿠폰) — 구조 검증 API 완료(backend #34·#56), 빌더 화면은 frontend #15 리뷰 중
-- [ ] 워크플로우 엔진: 500건 반복 처리, WAIT(`sent_at` 기준), CONDITION(봇 제외), 멈춤 복구, 멱등성 — backend #35 리뷰 중
-- [ ] 캠페인 상태 전이(DRAFT/SCHEDULED/ACTIVE/PAUSED/COMPLETED), 일시정지 시 PENDING 보류 — backend #35 에 포함(리뷰 중)
+- [x] 워크플로우 빌더(폼 기반) + 구조 검증(분기 2단계, 노드 15개, 순환 금지, SEND 노드별 쿠폰) (구조 검증 API backend #34·#56, 빌더 화면 frontend #15). 후속: 화면에서 생성 → 저장 → 시작 → 인스턴스 현황 흐름 확인(작성자), `InstancesPanel` 시각 표시 1곳 서울 고정
+- [x] 워크플로우 엔진: 500건 반복 처리, WAIT(`sent_at` 기준), CONDITION(봇 제외), 멈춤 복구, 멱등성 (backend #35 — PL 환경 전체 테스트 628건 통과). 후속: 단계 캐시(backend #72), CONDITION 대량 판정 dev 재검증(이슈 #51, 메인 #28)
+- [x] 캠페인 상태 전이(DRAFT/SCHEDULED/ACTIVE/PAUSED/COMPLETED), 일시정지 시 PENDING 보류 (backend #31·#35, 화면 frontend #15)
 - [ ] 캠페인 복제 API(PRD 6.7 "일시정지 후 복제") — backend #62
 
 **팀원3**
@@ -121,7 +121,7 @@
 - [ ] 버그 수정
 
 **팀원2**
-- [ ] 워크플로우 안정화(10만 건 적재 부하 확인, 우선순위 검증)
+- [ ] 워크플로우 안정화(10만 건 적재 부하 확인, 우선순위 검증) — 부하 1/3·2/3 완료(backend #70·#71): 10만 건 대기 중에도 priority 2 가 먼저 나가고(PL 환경 앞질러 나간 priority 3 이 17건 이하) 복구·자동 완료가 멈추지 않음, 적재는 DB 왕복에 선형(이슈 #73). 부하 3/3 대기
 - [ ] (선택) React Flow 캔버스 — A/B 테스트는 범위에서 제외(PL 결정 2026-10-06, 메인 #12)
 
 **팀원3**
