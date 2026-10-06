@@ -326,6 +326,15 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 
 오류: `CAMPAIGN_SEND_WINDOW_EXCEEDED`(422, `nextAvailableAt` 포함), `CAMPAIGN_INVALID_STATUS`(409), `CAMPAIGN_COUPON_REQUIRED`(422, `{{couponUrl}}` 템플릿에 쿠폰 없음), `COUPON_OUT_OF_PERIOD`(422).
 
+**POST /campaigns/{id}/duplicate**: 요청 본문 없음. 원본을 새 `DRAFT` 캠페인으로 복제하고 새 캠페인(상세 응답과 같은 형식)을 돌려준다. PRD 6.7 "활성 캠페인의 구조는 수정할 수 없고, 일시정지 후 복제해 새 캠페인으로 만든다"를 위한 API다.
+
+- 이름은 원래 이름 뒤에 ` (복사)` 를 붙인다. `campaign.name` 이 100자라 넘으면 원래 이름을 잘라 100자 이내로 맞춘다.
+- 세그먼트·템플릿·쿠폰·트리거 유형은 그대로 복사하고, `scheduledAt`·`startedAt`·`endedAt` 은 비운다.
+- 워크플로우는 노드(유형·설정·깊이)를 새 노드로 복사하고 `next`·`yes`·`no` 연결을 새 노드끼리 다시 잇는다. 인스턴스와 발송 이력(`send_log`)은 복사하지 않는다.
+- 원본은 어떤 상태(`DRAFT`·`SCHEDULED`·`ACTIVE`·`PAUSED`·`COMPLETED`)여도 복제할 수 있고, 원본은 바뀌지 않는다. 멱등하지 않아 같은 요청을 두 번 보내면 두 개가 생긴다.
+- 쿠폰 기간이 지났거나 템플릿·세그먼트가 삭제된 원본도 복제는 되고, 시작할 때 기존 검사(`COUPON_OUT_OF_PERIOD` 등)가 막는다.
+- 권한은 O·M 이며 STAFF 는 403. 오류: `CAMPAIGN_NOT_FOUND`(404).
+
 **PUT /campaigns/{id}/workflow**
 
 ```json
