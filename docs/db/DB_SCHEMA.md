@@ -314,6 +314,7 @@ CREATE TABLE send_log (
     sent_at              TIMESTAMPTZ,
     created_at           TIMESTAMPTZ  NOT NULL DEFAULT now(),
     updated_at           TIMESTAMPTZ  NOT NULL DEFAULT now(),                  -- SENDING 10분 초과 판단에 사용
+    template_id          BIGINT       REFERENCES template (template_id) ON DELETE SET NULL,  -- TEST 만 (V21 보완 컬럼)
     CONSTRAINT uq_send_log_step           UNIQUE (instance_id, step_id),
     CONSTRAINT uq_send_log_tracking_token UNIQUE (tracking_token)
 );
@@ -511,6 +512,8 @@ PRD 7장에 없지만 구현에 필요해 추가했다. PRD 갱신 대상이다.
 | `send_log` | `recipient` | 테스트 발송(고객 없음)과 발송 시점 주소 기록 |
 | `consent_history` | `note` | 관리자가 수신거부를 해제할 때 증빙 메모 |
 | `campaign` | `created_by` | 작성자 추적 (다른 마스터 테이블과 일관성) |
+| `send_log` | `template_id` | 테스트 발송(V21). TEST 는 campaign_id·step_id 가 없어 렌더링할 템플릿을 알 수 없다. TEST 만 값이 있고 나머지는 NULL. 템플릿이 삭제되면 `ON DELETE SET NULL` |
+| `campaign` | `start_claimed_at` | 시작 선점 표시(V20). 동시에 `start()` 를 부르는 요청 중 한 명만 적재·시작하게 한다. NULL 이면 아무도 시작 중이 아님, 10분 넘은 값은 낡은 선점으로 무시 |
 
 ## 9. 시드 데이터 (`R__seed_local.sql`, local 프로필 전용)
 
