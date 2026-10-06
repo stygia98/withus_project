@@ -382,6 +382,7 @@ send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 �
 - 정률(`RATE`)은 `discountValue` 1~100, `maxDiscountAmount` 필수. 정액(`AMOUNT`)의 `maxDiscountAmount`는 무시하고 `null`로 저장한다.
 - `PUT /coupons/{couponId}`는 POST와 같은 본문 전체를 받는다. 발급 이력이 있으면 다른 값은 그대로 두고 `validTo`를 같거나 늦게 바꾸는 것만 허용하며, 그 외 변경은 `COUPON_ALREADY_ISSUED`(409).
 - 날짜는 `YYYY-MM-DD`, 유효기간은 시작일·종료일 당일을 포함한다(Asia/Seoul 기준).
+- 발송 시 발급(`CouponService.issue`, 팀원2 발송 큐가 호출)은 발송 1건당 1건이다. 같은 `sendLogId`로 다시 호출하면 **처음 발급한 쿠폰의 토큰을 그대로 돌려준다**(재시도 멱등). 다른 `couponId`·`customerId`로 다시 호출하는 경로는 정상 흐름에 없으며, 이때도 처음 발급분을 돌려준다(project #12 PL 결정).
 
 **GET /coupons 응답 data** (페이징, 최근 생성순. 상세·생성·수정 응답은 `content[0]`과 같은 형식)
 
