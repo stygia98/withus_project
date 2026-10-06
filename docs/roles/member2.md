@@ -28,6 +28,7 @@
 
 **W2**
 - [ ] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함)
+- [ ] 템플릿 테스트 발송 API(F-04, `kind = TEST`, 통계 제외)
 - [ ] **공통 발송 큐**: PENDING 적재 → `SENDING` 선점 → 트랜잭션 밖 발송 → SENT/FAILED, 우선순위, 토큰 버킷 속도 제한
 - [ ] 발송 직전 재확인, 재시도(1·5·15분), `SENDING` 10분 초과 처리
 - [ ] 발송 시 렌더링: (광고)·발신자·수신거부 삽입, `PlaceholderRenderer`·`TrackingLinkService.rewrite` 연결
@@ -36,10 +37,11 @@
 - [ ] 워크플로우 빌더(폼 기반) + 구조 검증(분기 2단계, 노드 15개, 순환 금지, SEND 노드별 쿠폰)
 - [ ] 워크플로우 엔진: 500건 반복 처리, WAIT(`sent_at` 기준), CONDITION(봇 제외), 멈춤 복구, 멱등성
 - [ ] 캠페인 상태 전이(DRAFT/SCHEDULED/ACTIVE/PAUSED/COMPLETED), 일시정지 시 PENDING 보류
+- [ ] 캠페인 복제 API(PRD 6.7, 일시정지 후 복제)
 
 **W4**
 - [ ] 워크플로우 안정화(10만 건 적재 부하, 우선순위 검증)
-- [ ] (선택) A/B 테스트, React Flow 캔버스
+- [ ] (선택) React Flow 캔버스 (A/B 테스트는 범위 제외, PL 결정 2026-10-06)
 
 **W5**
 - [ ] 내 구간 PRD 10.3 완료 기준 운영 재검증, 시연 데이터
