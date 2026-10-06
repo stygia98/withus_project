@@ -551,7 +551,12 @@ PRD 7장에 없지만 구현에 필요해 추가했다. PRD 갱신 대상이다.
 
 - 빈 DB 기준 건수(2026-10-06 확인): `send_log` 196(SENT 187), `track_event` 119(봇 2), `coupon_issue` 32(사용 4).
 - **넣지 않는 것**: PENDING·SENDING 발송(로컬 발송 작업이 실제로 보내 버림), `purchase`(누적구매액은 customer 도메인 쓰기), `ai_report`, A/B.
-- `[시연] 가을 감사 쿠폰 발송` 캠페인이 이미 있으면 전체를 건너뛴다(재실행 대비). 날짜를 오늘 기준으로 다시 맞추려면 로컬 DB 를 다시 만든다(`docker compose down -v`).
+- `[시연] 가을 감사 쿠폰 발송` 캠페인이 이미 있으면 전체를 건너뛴다(재실행 대비).
+- **W5 시연 전날 날짜 맞추기**: 시각이 처음 적용한 날 기준이라 며칠 지나면 대시보드 기본 "최근 7일" KPI 가 비어 보인다. 시연 전날 시연할 PC 에서 로컬 DB 를 다시 만든다.
+  1. 백엔드를 끄고 `cd infra && docker compose down -v && docker compose up -d` (DB 볼륨 삭제 — 직접 만든 고객·캠페인도 모두 지워진다)
+  2. 백엔드를 local 프로필로 기동 → Flyway 가 `V` 마이그레이션 → `seed local` → `seed local demo` 순으로 다시 적용한다
+  3. 대시보드 "최근 7일" 에 쿠폰 캠페인(5일 전)이 보이는지 확인
+  - 다른 데이터를 남기고 시연 데이터만 새로 넣고 싶으면 project #12 의 삭제 SQL 을 실행한 뒤 `DELETE FROM flyway_schema_history WHERE description = 'seed local demo';` 도 함께 실행하고 백엔드를 다시 띄운다. 반복 마이그레이션은 **파일 체크섬이 바뀔 때만** 다시 실행되므로, 데이터만 지우면 시연 데이터가 다시 들어가지 않는다.
 - 1일 전 시작한 워크플로우 인스턴스는 WAITING 이고 `next_run_at` 이 내일이다. **워크플로우 엔진(backend #35)이 병합된 뒤에는 로컬에서 그 시각에 이어서 진행되어 실제로 발송된다**(Mailpit 으로 수신).
 
 ## 10. V1 이후 스키마 변경
