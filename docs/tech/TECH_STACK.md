@@ -250,7 +250,7 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | Tailwind CSS | 4.x | 4.3.3 |
 | TanStack Query | 5.x | 5.104.0 |
 | Recharts (shadcn Chart) | 3.x | 3.8.0 (팀원3 대시보드, `components/ui/chart.tsx`는 `dangerouslySetInnerHTML` 제거본) |
-| TinyMCE | 최신 (자체 설치, GPLv2+) | 설치 시 기록 (팀원2), `license_key: 'gpl'` |
+| TinyMCE | `tinymce` 8.9.2 + `@tinymce/tinymce-react` 6.3.0 (자체 설치, GPLv2+) | `license_key: 'gpl'`. `scripts/copy-tinymce.mjs` 가 쓰는 파일(핵심·테마·아이콘·스킨·플러그인 link/lists/image/table)만 `public/tinymce` 로 복사 (팀원2, 2026-10-06) |
 | Lombok | Spring Boot BOM 관리 버전 | BOM 관리 (허용 어노테이션은 `lombok.config`로 강제) |
 | react-hook-form / zod / @hookform/resolvers | 최신 안정판 | 7.89.0 / 4.6.5 / 5.9.1 |
 | Prettier | 최신 안정판 | 3.9.9 (`.prettierrc`: printWidth 100, `*.md` 제외) |
