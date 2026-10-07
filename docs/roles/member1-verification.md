@@ -30,7 +30,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 
 ## 3. 로컬 수동 확인 절차
 
-준비: `cd infra && docker compose up -d` → 백엔드 `./mvnw spring-boot:run -Dspring-boot.run.profiles=local`(시드 `R__seed_local.sql` 자동 적용) → 프론트 `npm run dev` → `http://localhost:3000` 에 `infra/.env` 의 `OWNER_EMAIL`/`OWNER_PASSWORD` 로 로그인. 7번(메일의 수신거부 링크)은 백엔드를 `WITHUS_PUBLIC_BASE_URL=http://localhost:3000` 으로 띄운다 — 기본값(`http://localhost:8080`)이면 링크가 백엔드로 가서 401 이 난다(운영은 Amplify 주소라 해당 없음).
+준비: `cd infra && docker compose up -d` → 백엔드 `./mvnw spring-boot:run -Dspring-boot.run.profiles=local`(`db/seed/local` 의 시드 `R__seed_local.sql`·`R__seed_local_demo.sql` 자동 적용, 시연 시드는 고객을 늘리지 않는다) → 프론트 `npm run dev` → `http://localhost:3000` 에 `infra/.env` 의 `OWNER_EMAIL`/`OWNER_PASSWORD` 로 로그인. 메일 링크(7번 수신거부 등)는 local 기본값 `http://localhost:3000`(프론트) 기준으로 만들어진다(backend #68, 운영은 `WITHUS_PUBLIC_BASE_URL` 에 Amplify 주소).
 
 | # | 화면 | 절차 | 기대 결과 |
 |---|---|---|---|
@@ -58,7 +58,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 | 2026-10-02 | 7 | 통과 — 이메일 동의 Y 고객 1명 세그먼트로 일회성 캠페인 시작 → Mailpit 메일 `(광고)` 제목, 본문 링크 `/unsubscribe/{token}`·`List-Unsubscribe` 헤더(one-click). 링크 열기만 해서는 동의 Y·이력 없음, 이메일 선택 후 버튼 → "수신거부가 처리되었습니다"·처리 일시 17:16(서울), 동의 N·이력 UNSUBSCRIBE·suppression(UNSUBSCRIBE). 같은 세그먼트로 다시 시작한 캠페인은 send_log SKIPPED, 메일 추가 없음 |
 | 2026-10-02 | 8 | 통과 — `010-5555-9999` 등록, suppression `01055559999` 와 일치 → SMS 동의 N, "과거 수신거부 이력이 있어 해당 채널은 수신거부로 등록했습니다." 안내, 숫자만 저장 |
 
-리허설 중 화면 콘솔 오류 없음. 고객 구간 버그 없음. 공통 영역 발견 1건: backend 이슈 #46(local 시드가 운영 Flyway 스캔에 포함될 수 있음, PL 담당).
+리허설 중 화면 콘솔 오류 없음. 고객 구간 버그 없음. 공통 영역 발견 1건: backend 이슈 #46(local 시드가 운영 Flyway 스캔에 포함될 수 있음) — 해결(backend #50, 시드를 `db/seed/local` 로 이동).
 
 ## 4. 운영 재검증 전 준비 (W5)
 
@@ -76,7 +76,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 4. 구독 확인: 백엔드 로그 `SES 웹훅: SNS 구독 확인 완료 topic=…` 이 남고 SNS 콘솔 구독 상태가 Confirmed. 실패 로그는 `SNS 가 아닌 SubscribeURL 무시`, `서명 정보가 올바르지 않은 요청 무시`, `서명 불일치 요청 무시`
 
 **데이터**
-- local 시드(`R__seed_local.sql`)가 운영 DB 에 들어가지 않았는지 — 운영 `flyway_schema_history` 에 `seed local` 행이 없어야 한다(backend 이슈 #46)
+- local 시드(`R__seed_local.sql`·`R__seed_local_demo.sql`)가 운영 DB 에 들어가지 않았는지 — 운영 `flyway_schema_history` 에 `seed local`·`seed local demo` 행이 없어야 한다(backend 이슈 #46, #50 으로 해결 — 배포 후 확인만)
 - 운영 DB 는 직접 수정하지 않는다(CLAUDE.md 9장). 시연 고객은 `/customers` 업로드로만 넣는다(task22 파일)
 - SES 샌드박스라 메일을 받을 고객은 PL 이 인증한 주소만 쓴다
 
