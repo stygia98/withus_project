@@ -272,7 +272,11 @@ rule 형식은 `docs/db/DB_SCHEMA.md` 5.1.
 { "recipient": "me@withus.kr" }
 ```
 
-send_log에 kind=TEST, priority=1로 적재. 샘플 값 치환, 추적·쿠폰 발급 없음, 시간 제한 없음, 통계 제외.
+send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` NULL, `template_id` 에 템플릿 기록). 샘플 값 치환, 추적·쿠폰 발급 없음(쿠폰·수신거부 링크는 예시 주소), 시간 제한 없음, 통계 제외.
+
+- `recipient` 는 템플릿 채널에 따라 이메일 주소(소문자·trim 으로 정규화) 또는 휴대폰 번호(숫자만)다.
+- 응답 `data` 는 `null` 이다. 적재만 하며 실제 발송은 발송 큐가 우선순위 1로 곧바로 처리한다.
+- 오류: `COMMON_INVALID_INPUT`(400, 이메일 형식), `CUSTOMER_INVALID_PHONE`(400), `TEMPLATE_NOT_FOUND`(404).
 
 ## 6. 캠페인·워크플로우 (팀원2 · `campaign`, `workflow`)
 
