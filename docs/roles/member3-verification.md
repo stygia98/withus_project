@@ -124,7 +124,19 @@ W3 "봇 판정 User-Agent 목록을 실제 메일로 검증·보강"은 W5로 �
 
 - RUNNING으로 남은 인스턴스는 없다. 두 조회는 모두 인덱스를 탄다(약 0.04ms).
 - 시간은 대부분 DB 왕복(인스턴스당 약 5회)이다. 스케줄러가 `fixedDelay`라 처리가 길어도 주기가 겹치지 않고, 500건 단위로 선점해 RUNNING 10분 복구에도 걸리지 않는다. 몰린 건의 뒤쪽이 늦게 처리될 뿐 판정은 바뀌지 않는다.
-- #35가 dev에 병합되면 같은 검증을 dev에서 한 번 더 돌린다(backend #51).
+
+**dev 재검증 (#35 병합본 `f14d3bc`, 2026-10-06, backend #51)**
+
+같은 검증 코드·조건으로 병합된 dev 에서 다시 돌렸다. 다른 캠페인 실행 대기 0건.
+
+| N | 오판정 | `dispatch()` | 인스턴스당 |
+|---|---|---|---|
+| 2,000 | 0 | 8.4초 | 4.18ms |
+| 5,000 | 0 | 23.4초 | 4.68ms |
+| 20,000 | 0 | 95.0초 | 4.75ms |
+
+- 시나리오 9종 × 조건 2개, 18칸 모두 기대 경로와 같고 RUNNING 으로 남은 인스턴스는 없다. 리뷰 중 브랜치 결과와 같은 수준이다.
+- 실행 계획: `findLatestSendLogId` 는 `uq_send_log_step` Index Scan(0.038ms), `existsHumanEvent` 는 `ix_track_event_send_log` + `send_log_pkey`(0.042ms).
 
 ## 6. 3.2 점검표 로컬 리허설 (2026-10-06)
 
@@ -136,7 +148,7 @@ W5 전에 3.2를 운영 SES 대신 Mailpit으로 미리 돌렸다. 운영에서�
 | # | 결과 | 확인 내용 |
 |---|---|---|
 | 1 | 통과 | 임의 UUID 오픈 200 `image/gif`, 클릭 302(`base-url`로 이동), 형식 오류 토큰 200, 실제 토큰 한 글자 변경 200. `track_event` 132 → 132 |
-| 2 | 부분 통과 | 캠페인 메일 HTML: 일반 링크는 `/t/c/{그 발송의 tracking_token}/{linkId}`, 오픈 픽셀 삽입, 쿠폰 `/c/…`·수신거부 `/unsubscribe/…` 링크는 원래 주소 그대로. **테스트 발송 API(`POST /templates/{id}/test-send`)가 아직 없어(팀원2) TEST 제외는 확인 못 함** — 자동 테스트 `DashboardServiceTest`로만 근거 |
+| 2 | 통과 | 캠페인 메일 HTML: 일반 링크는 `/t/c/{그 발송의 tracking_token}/{linkId}`, 오픈 픽셀 삽입, 쿠폰 `/c/…`·수신거부 `/unsubscribe/…` 링크는 원래 주소 그대로. TEST 제외는 테스트 발송 API(backend #69) 병합 후 아래에서 확인 |
 | 3 | 해당 없음 | 실제 메일 서비스 필요 (W5) |
 | 4 | 통과 | 발송 37초 뒤 오픈·클릭(데스크톱 Chrome UA) → `bot_yn = 'N'`, 캠페인 KPI 오픈·클릭 각 2/5, 대시보드 최근 이벤트에 표시 |
 | 5 | 통과 | 첫 건이 SENT가 되는 순간 클릭(발송 0.5초 뒤, iPhone Safari UA) → `bot_yn = 'Y'`, 캠페인 1511 클릭 0, 최근 이벤트에 없음 |
@@ -149,7 +161,14 @@ W5 전에 3.2를 운영 SES 대신 Mailpit으로 미리 돌렸다. 운영에서�
 
 **로컬에서만 다른 점**
 
-- `withus.tracking.base-url` 기본값이 `http://localhost:8080`(백엔드)이라 Mailpit에서 쿠폰·수신거부 링크를 누르면 백엔드로 가서 401이 난다(`/c/…`, `/unsubscribe/…`는 프론트 화면). 프론트(3000)는 `/t/*`를 백엔드로 프록시하므로, 로컬에서 메일 링크까지 눌러 보려면 **`WITHUS_PUBLIC_BASE_URL=http://localhost:3000`**으로 띄우면 운영(Amplify)과 같은 구조가 된다. 이번 리허설은 쿠폰 화면을 3000 주소로 직접 열었다.
+- local 프로필의 `withus.tracking.base-url` 기본값은 `http://localhost:3000`(프론트)이다(backend `716b3c3`). 프론트가 `/t/*`를 백엔드로 프록시하므로 Mailpit에서 메일 링크를 눌러도 운영(Amplify)과 같은 구조로 동작한다. 그 전(리허설 당시)에는 8080이라 쿠폰·수신거부 링크가 401이었다.
 - 사람 클릭에는 OPEN 이벤트가 함께 저장된다(이미지 차단으로 픽셀이 안 불린 경우 보정). 봇 클릭에는 붙지 않는다.
 
-**W5에 남은 것**: 3·7·11번, 2번의 TEST 제외(테스트 발송 API 병합 후), 1번의 Amplify → EC2 `/t/*` 프록시.
+**2번 TEST 제외 확인 (2026-10-06, backend dev `fc00c17`, 테스트 발송 API #69 병합 후)**
+
+- `POST /templates/484/test-send`(쿠폰 안내 메일) → `send_log` `kind = TEST`, `priority = 1`, SENT.
+- 받은 메일 HTML: 일반 링크(`https://example.com/sale`)가 추적 주소로 바뀌지 않고 오픈 픽셀도 없다. 쿠폰 링크는 샘플 값(`/c/example`)이고 `coupon_issue`는 생기지 않는다. 이름은 샘플 값(홍길동), `(광고)`·발신자·수신거부 안내는 시스템이 넣는다.
+- 대시보드: 발송 전후 KPI(시도 77·성공 74·오픈 30·클릭 14·전환 5), 일별 발송(오늘 10), 최근 이벤트(마지막 `eventId`)가 모두 같다.
+- 추적이 없으므로 TEST 발송에서는 이벤트가 생기지 않는다. 혹시 생겨도 집계·워크플로우 분기에서 빠지는 것은 `DashboardServiceTest`·`TrackEventRepositoryConditionTest`가 지킨다.
+
+**W5에 남은 것**: 3·7·11번, 1번의 Amplify → EC2 `/t/*` 프록시.
