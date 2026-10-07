@@ -113,11 +113,11 @@
 **목표:** M4. 남은 기능을 마치고 10.3 완료 기준을 로컬에서 모두 통과시킨다.
 
 **PL**
-- [ ] PRD 10.3 완료 기준 전체 점검, 통합 테스트, 코드 리뷰 — 로컬 점검 완료(2026-10-07, `docs/roles/pl-verification.md`): 40개 중 충족 36(일부는 W5·직접 재현 불가 포함), ❌ 1(항목 24 F-12 NOTICE 렌더링, backend #81), ⏳ 2(항목 10 배포 보류, 항목 30 1만 명 적재 시간은 RDS 재측정), ➖ 1(A/B). #81 이 끝나고 W5 운영 재검증이 끝나면 완료
+- [ ] PRD 10.3 완료 기준 전체 점검, 통합 테스트, 코드 리뷰 — 로컬 점검 완료(2026-10-07, `docs/roles/pl-verification.md`): 40개 중 충족 37(일부는 W5·직접 재현 불가 포함), ❌ 0(항목 24 F-12 는 backend #87 머지로 해소), ⏳ 2(항목 10 배포 보류, 항목 30 1만 명 적재 시간은 RDS 재측정), ➖ 1(A/B). W5 운영 재검증이 끝나면 완료
 - [ ] 운영 배포 스크립트 준비(`infra/aws/`), 배포 리허설(Amplify → EC2 프록시 확인)
 
 **팀원1**
-- [ ] 수신동의 2년 확인 안내(F-12, NOTICE 발송·시간 제한) — 대상 선정·NOTICE 적재·시간 제한 완료(backend #40·#49, 쿨다운 30일 PL 확정), 본문용 동의 일시 조회 `ConsentService.findConsentAt` 완료(backend #84). **NOTICE 본문 렌더링은 미구현이라 `consent-notice.enabled=false` 유지**(backend 이슈 #81, PL 결정 2026-10-07: 담당 팀원2, 코드 고정 문구+치환). 이전에 `[x]`였으나 렌더링이 빠져 있어 재오픈
+- [x] 수신동의 2년 확인 안내(F-12, NOTICE 발송·시간 제한) — 대상 선정·NOTICE 적재·시간 제한(backend #40·#49, 쿨다운 30일 PL 확정), 본문용 동의 일시 조회 `ConsentService.findConsentAt`(backend #84), NOTICE 본문 렌더링(backend #87, 코드 고정 문구+치환). PL 이 2026-10-07 local 에서 시드 99번으로 실제 앱·Mailpit 수신까지 확인. `consent-notice.enabled` 기본값은 `false` 그대로이고 운영 설정은 W5(`WITHUS_SCHEDULER_CONSENT_NOTICE_ENABLED`). 운영 시연은 제외(PL 결정, backend #81)
 - [ ] 버그 수정
 
 **팀원2**
@@ -125,7 +125,7 @@
 - [ ] (선택) React Flow 캔버스 — A/B 테스트는 범위에서 제외(PL 결정 2026-10-06, 메인 #12)
 - [x] `SesMessageSender`(AWS SDK v2 `sesv2`, 원시 MIME·List-Unsubscribe, `withus.mail.type=ses`) — 구현 backend #85. PL 리뷰에서 SDK 자체 재시도가 같은 메일을 4번 보내는 중복 발송 경로를 실측으로 찾아 `doNotRetry()` 와 회귀 테스트(`SesMessageSenderRetryTest`)로 고쳤다. PL 승인은 **코드·의존성만**(backend 이슈 #78), 실제 SES 호출 검증과 SES 주소 인증·운영 설정은 W5
 - [x] `S3FileStorage`(AWS SDK v2 `s3`, 에디터 이미지 공개 읽기 URL 그대로 반환, `withus.storage.type=s3`) — 구현 backend #86(`images/<UUID>.<확장자>` 키, 로컬 동작 불변). 이미지 업로드만, CSV 저장은 별도. **"이미지 경로만 공개 읽기"(PRD 8.5)는 버킷 정책으로 지키므로 W5 에 `images/*` 에만 `s3:GetObject` 를 허용**하고, 실제 S3 업로드·공개 URL 접근 검증도 W5
-- 팀원2 남은 구현: **F-12 NOTICE 렌더링(위 팀원1 항목, backend #81)**. SES(#85)·S3(#86)는 2026-10-07 머지 완료
+- 팀원2 구현 항목(SES #85, S3 #86, F-12 NOTICE 렌더링 #87)은 2026-10-07 모두 머지 완료. 남은 것은 워크플로우 안정화(RDS 측정 대기)와 선택 항목
 
 **팀원3**
 - [x] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장) (backend #16, frontend #4 — W4 항목 선행 완료)
