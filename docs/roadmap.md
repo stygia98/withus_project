@@ -117,12 +117,15 @@
 - [ ] 운영 배포 스크립트 준비(`infra/aws/`), 배포 리허설(Amplify → EC2 프록시 확인)
 
 **팀원1**
-- [x] 수신동의 2년 확인 안내(F-12, NOTICE 발송·시간 제한) (backend #40·#49 — 쿨다운 30일 PL 확정)
+- [ ] 수신동의 2년 확인 안내(F-12, NOTICE 발송·시간 제한) — 대상 선정·NOTICE 적재·시간 제한 완료(backend #40·#49, 쿨다운 30일 PL 확정), 본문용 동의 일시 조회 `ConsentService.findConsentAt` 완료(backend #84). **NOTICE 본문 렌더링은 미구현이라 `consent-notice.enabled=false` 유지**(backend 이슈 #81, PL 결정 2026-10-07: 담당 팀원2, 코드 고정 문구+치환). 이전에 `[x]`였으나 렌더링이 빠져 있어 재오픈
 - [ ] 버그 수정
 
 **팀원2**
 - [ ] 워크플로우 안정화(10만 건 적재 부하 확인, 우선순위 검증) — 부하 1/3·2/3 완료(backend #70·#71): 10만 건 대기 중에도 priority 2 가 먼저 나가고(PL 환경 앞질러 나간 priority 3 이 17건 이하) 복구·자동 완료가 멈추지 않음. CONDITION 단계 캐시로 5,000건 판정 DB 왕복 감소(backend #72). 적재 시간(이슈 #73)은 DB 왕복이 아니라 커밋의 WAL fsync 가 좌우함을 PL 환경에서 확인(총 73.7초 중 fsync 53.2초, 디스크 동기 쓰기 150~330ms) — 운영(RDS) 재현 여부는 W5 에서 `EnqueuePhaseCheck`(backend #77)로 확인. 부하 3/3 대기
 - [ ] (선택) React Flow 캔버스 — A/B 테스트는 범위에서 제외(PL 결정 2026-10-06, 메인 #12)
+- [ ] `SesMessageSender`(AWS SDK v2 `sesv2`, 원시 MIME·List-Unsubscribe, `withus.mail.type=ses`) — PL 승인 2026-10-07(backend 이슈 #78): **코드·의존성만** 승인, SES 주소 인증·운영 설정은 W5 PL 일정
+- [ ] `S3FileStorage`(AWS SDK v2 `s3`, 에디터 이미지 공개 읽기 URL 그대로 반환, `withus.storage.type=s3`) — PL 승인 2026-10-07(backend 이슈 #78): 이미지 업로드만, CSV 저장은 별도, 버킷·공개 정책은 W5 PL 일정
+- 팀원2 구현 순서(PL 제안 2026-10-07): **SES → F-12 NOTICE 렌더링(위 팀원1 항목, backend #81) → S3**. 시연에서 메일이 실제로 나가야 나머지가 의미가 있다
 
 **팀원3**
 - [x] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장) (backend #16, frontend #4 — W4 항목 선행 완료)
@@ -139,7 +142,7 @@
 - [ ] 발신자 명칭·연락처·080 번호를 실제 값으로 교체
 
 **팀원1·2·3**
-- [ ] 각자 구간의 10.3 완료 기준을 운영 환경에서 재검증
+- [ ] 각자 구간의 10.3 완료 기준을 운영 환경에서 재검증 — 단, **F-12 수신동의 확인 안내 발송은 운영 시연에서 제외**(PL 결정 2026-10-07, backend #81): 운영에서 동의 일시를 2년 전으로 만들 방법이 없고 운영 DB 직접 수정은 금지라, local(시드 99번, Mailpit) 확인으로 10.3 기준을 충족한다
 - [ ] 시연 데이터 준비(local 시드에 발송·이벤트 예시 추가는 완료 — `db/seed/local/R__seed_local_demo.sql`, backend #65·메인 #25, 메인 #12 결정), 발견된 버그 수정
 
 ## 4. 주요 의존 관계
