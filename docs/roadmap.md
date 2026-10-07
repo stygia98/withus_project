@@ -65,7 +65,7 @@
 **목표:** M2. 가장 단순한 경로로 발송·추적 전체 흐름을 검증한다.
 
 **PL**
-- [ ] 일회성 발송 E2E 통합 테스트
+- [x] 일회성 발송 E2E 통합 테스트 — PL 이 2026-10-07 스케줄러를 켠 실제 앱(스크래치 DB·Mailpit)에서 API 로 전체 흐름을 점검해 통과: CSV 업로드(성공 36·실패 4)·입력값 정규화 → 구매 등록·세그먼트 미리보기 → 21시 예약 차단(다음 가능 시각 안내) → 예약 → 자동 시작·발송·완료 → 메일 내용((광고)·발신자·수신거부·오픈 픽셀·추적 링크, 쿠폰·수신거부 링크는 치환 안 됨) → 오픈·클릭·봇 판정(변조·없는 토큰은 저장 안 됨)·대시보드(봇 제외) → 쿠폰 GET 불변·POST 1회 → 수신거부 GET 불변·POST 처리(멱등)·재발송 제외. 프론트 공개 페이지 렌더링, 재시작 복구, 운영 SES 는 이 점검 범위 밖
 
 **팀원1**
 - [x] CSV/xlsx 업로드(10,000행, 500행 배치 insert, 행별 결과, `suppression` 반영) (backend #9, frontend #2 — 1만 행 2.3초)
@@ -123,9 +123,9 @@
 **팀원2**
 - [ ] 워크플로우 안정화(10만 건 적재 부하 확인, 우선순위 검증) — 부하 1/3·2/3 완료(backend #70·#71): 10만 건 대기 중에도 priority 2 가 먼저 나가고(PL 환경 앞질러 나간 priority 3 이 17건 이하) 복구·자동 완료가 멈추지 않음. CONDITION 단계 캐시로 5,000건 판정 DB 왕복 감소(backend #72). 적재 시간(이슈 #73)은 DB 왕복이 아니라 커밋의 WAL fsync 가 좌우함을 PL 환경에서 확인(총 73.7초 중 fsync 53.2초, 디스크 동기 쓰기 150~330ms) — 운영(RDS) 재현 여부는 W5 에서 `EnqueuePhaseCheck`(backend #77)로 확인. 부하 3/3 대기
 - [ ] (선택) React Flow 캔버스 — A/B 테스트는 범위에서 제외(PL 결정 2026-10-06, 메인 #12)
-- [ ] `SesMessageSender`(AWS SDK v2 `sesv2`, 원시 MIME·List-Unsubscribe, `withus.mail.type=ses`) — PL 승인 2026-10-07(backend 이슈 #78): **코드·의존성만** 승인, SES 주소 인증·운영 설정은 W5 PL 일정
-- [ ] `S3FileStorage`(AWS SDK v2 `s3`, 에디터 이미지 공개 읽기 URL 그대로 반환, `withus.storage.type=s3`) — PL 승인 2026-10-07(backend 이슈 #78): 이미지 업로드만, CSV 저장은 별도, 버킷·공개 정책은 W5 PL 일정
-- 팀원2 구현 순서(PL 제안 2026-10-07): **SES → F-12 NOTICE 렌더링(위 팀원1 항목, backend #81) → S3**. 시연에서 메일이 실제로 나가야 나머지가 의미가 있다
+- [x] `SesMessageSender`(AWS SDK v2 `sesv2`, 원시 MIME·List-Unsubscribe, `withus.mail.type=ses`) — 구현 backend #85. PL 리뷰에서 SDK 자체 재시도가 같은 메일을 4번 보내는 중복 발송 경로를 실측으로 찾아 `doNotRetry()` 와 회귀 테스트(`SesMessageSenderRetryTest`)로 고쳤다. PL 승인은 **코드·의존성만**(backend 이슈 #78), 실제 SES 호출 검증과 SES 주소 인증·운영 설정은 W5
+- [x] `S3FileStorage`(AWS SDK v2 `s3`, 에디터 이미지 공개 읽기 URL 그대로 반환, `withus.storage.type=s3`) — 구현 backend #86(`images/<UUID>.<확장자>` 키, 로컬 동작 불변). 이미지 업로드만, CSV 저장은 별도. **"이미지 경로만 공개 읽기"(PRD 8.5)는 버킷 정책으로 지키므로 W5 에 `images/*` 에만 `s3:GetObject` 를 허용**하고, 실제 S3 업로드·공개 URL 접근 검증도 W5
+- 팀원2 남은 구현: **F-12 NOTICE 렌더링(위 팀원1 항목, backend #81)**. SES(#85)·S3(#86)는 2026-10-07 머지 완료
 
 **팀원3**
 - [x] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장) (backend #16, frontend #4 — W4 항목 선행 완료)
