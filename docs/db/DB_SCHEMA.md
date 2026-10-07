@@ -521,7 +521,7 @@ PRD 7장에 없지만 구현에 필요해 추가했다. PRD 갱신 대상이다.
 - `R__` 파일은 내용이 바뀔 때마다 모든 `V` 마이그레이션 뒤에 다시 실행된다. 따라서 **여러 번 실행해도 결과가 같게** 작성한다 (`INSERT ... ON CONFLICT DO NOTHING`, 고정 키 기준 upsert 등).
 
 - OWNER 계정은 시드가 아니라 애플리케이션 시작 시 환경변수로 1개 생성한다.
-- 로컬 시연용: 고객 100명(지역·나이·구매액 분포), 세그먼트 2개, 템플릿 3개(메일 2, SMS 1), 쿠폰 2개(정액·정률).
+- 로컬 시연용: 고객 100명(지역·나이·구매액 분포), 세그먼트 2개, 템플릿 5개(광고 메일 2·SMS 1, 비광고 메일 1·SMS 1), 쿠폰 2개(정액·정률).
 - 파일: `withus_backend/src/main/resources/db/seed/local/R__seed_local.sql`
 - **`db/migration` 아래(하위 폴더 포함)에 두면 안 된다.** Flyway 는 location 을 하위 폴더까지 재귀로 스캔하므로, 운영(`locations: classpath:db/migration`)에도 시드가 적용된다(이슈 #46에서 확인: 운영 설정으로 빈 DB 를 마이그레이션하면 고객 100명이 생성됨). 시드는 `db/seed/local` 에 두고 `application-local.yml` 의 `locations` 에만 추가한다. 백엔드 `FlywayLocationTest` 가 이를 확인한다.
 - **시드 작성자 계정** `seed@withus.local`(STAFF, 비활성, 로그인 불가): Flyway가 OWNER 생성(앱 시작 후)보다 먼저 실행되므로 세그먼트·템플릿의 `created_by` 용으로 시드가 만든다. OWNER가 아니라 최초 OWNER 생성에는 영향이 없다.
@@ -550,7 +550,7 @@ PRD 7장에 없지만 구현에 필요해 추가했다. PRD 갱신 대상이다.
 | `[시연] 가을 감사 쿠폰 발송` | ONE_TIME COMPLETED | 5일 전 | 세그먼트 1, 쿠폰 '5,000원 할인', FAILED 3건, 봇 이벤트 일부(`bot_yn = 'Y'`), 쿠폰 사용(고객 페이지 경로) |
 | `[시연] 신규 가입 환영 메일` | ONE_TIME COMPLETED | 12일 전 | 세그먼트 2. 기본 7일 KPI 밖, 14일 차트·30일 필터에서 보임 |
 | `[시연] 9월 정기 소식` | ONE_TIME COMPLETED | 25일 전 | 메일 동의 전체. AI-02 시간대 추천에 필요한 사람 이벤트(최근 90일 100건 이상)를 채움 |
-| `[시연] 신규 고객 환영 여정` | WORKFLOW ACTIVE | 6일·4일·1일 전 시작 | 환영 메일 → 2일 대기 → 클릭 여부로 쿠폰 메일 / SMS 분기, SMS 수신거부는 SKIPPED |
+| `[시연] 신규 고객 환영 여정` | WORKFLOW ACTIVE | 6일·4일·1일 전 시작 | PRD 6.4 구조(노드 11개): 환영 메일 → 2일 대기 → 클릭 여부 → (클릭) 구매 10만 원 이상이면 VIP 쿠폰 메일 / 미만이면 일반 쿠폰 메일, (미클릭) SMS, SMS 수신거부는 SKIPPED |
 
 - 빈 DB 기준 건수(2026-10-06 확인): `send_log` 196(SENT 187), `track_event` 119(봇 2), `coupon_issue` 32(사용 4).
 - **넣지 않는 것**: PENDING·SENDING 발송(로컬 발송 작업이 실제로 보내 버림), `purchase`(누적구매액은 customer 도메인 쓰기), `ai_report`, A/B.
