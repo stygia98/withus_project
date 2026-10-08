@@ -9,7 +9,7 @@
 ```
 [브라우저]    ─┐
 [메일 수신자] ─┼─https──▶ [AWS Amplify: Next.js 15 SSR]  <앱>.amplifyapp.com (기본 주소, 도메인 구매 없음)
-[SNS 웹훅]   ─┘                │  rewrites /api/*, /t/* (쿠키 퍼스트파티, CORS 불필요)
+[SNS 웹훅]   ─┘                │  rewrites /api/*, /t/*, /files/* (쿠키 퍼스트파티, CORS 불필요)
                                ▼  http
                      [EC2: Spring Boot 4 (단일 인스턴스), 도메인·인증서 없음]
                       ├─ PostgreSQL 17 (RDS, 자동 백업 7일)
@@ -63,7 +63,7 @@
 src/main/resources/
 ├─ application.yml             공통
 ├─ application-local.yml       로컬 (docker compose, Mailpit, 로컬 디스크, SMS Mock)
-├─ application-prod.yml        운영 (RDS, SES, S3) — 비밀값은 환경변수 (W5 작성)
+├─ application-prod.yml        운영 (RDS, SES, S3) — 비밀값은 환경변수 (작성 완료, 환경변수 목록은 infra/aws/env.prod.example)
 ├─ mapper/{domain}/*.xml
 ├─ db/migration/               운영·로컬 공통. Flyway 가 하위 폴더까지 재귀로 스캔하므로 시드를 두지 않는다 (이슈 #46)
 │  └─ V1__init.sql
@@ -189,19 +189,19 @@ withus_frontend/
 ├─ components/{domain}/
 ├─ lib/api-client.ts              fetch 래퍼 (credentials, X-XSRF-TOKEN, 401 재시도)
 ├─ lib/query-keys.ts
-└─ next.config.ts                 rewrites: /api/:path* → ${BACKEND_URL}/api/:path*
+└─ next.config.ts                 rewrites: /api/*, /t/*, /files/* → ${BACKEND_URL}/...
 ```
 
-**환경변수**: `BACKEND_URL`(서버 전용, 로컬 `http://localhost:8080`). 브라우저 코드에서는 백엔드 주소를 쓰지 않으므로 `NEXT_PUBLIC_` 변수가 필요 없다.
+**환경변수**: `BACKEND_URL`(서버 전용, 로컬 `http://localhost:8080`). 브라우저 코드에서는 백엔드 주소를 쓰지 않으므로 `NEXT_PUBLIC_` 변수가 필요 없다. rewrites 는 `next build` 때 정해지므로 Amplify 에서는 빌드 환경변수로 넣고, 바꾸면 다시 빌드한다. `/files/*` 는 local 이미지(`LocalFileStorage`)용이며, 운영(S3)에서는 이미지가 S3 공개 URL 로 바로 나간다.
 
 ## 4. 인프라·도구
 
 | 항목 | 선택 | 비고 |
 |---|---|---|
-| 로컬 DB | Docker `postgres:17` | 5432, DB/계정 `withus` |
-| 로컬 메일 | Docker `axllent/mailpit` | SMTP 1025, 웹 UI 8025 |
-| 운영 백엔드 | EC2 1대 (Amazon Linux 또는 Ubuntu), Java 21, systemd 서비스 | |
-| 리버스 프록시·HTTPS | 없음. Amplify 기본 주소(HTTPS) + Next.js rewrites(`/api/*`, `/t/*`) | 도메인 구매 없음(PRD 10.4). EC2 보안 그룹은 백엔드 포트만 연다 |
+| 로컬 DB | Docker `postgres:17` | 5432, DB/계정 `withus`. Docker 없이 PC 에 설치한 PostgreSQL 17 도 된다(`infra/.env` 의 계정만 맞춘다) |
+| 로컬 메일 | Docker `axllent/mailpit` | SMTP 1025, 웹 UI 8025. Docker 없이 `winget install axllent.mailpit` 도 된다. **백엔드 테스트(`SendDispatcher*`)도 Mailpit 이 떠 있어야 통과한다** |
+| 운영 백엔드 | EC2 1대 (Amazon Linux 또는 Ubuntu), Java 21, systemd 서비스 | 배포 절차·스크립트는 `infra/aws/README.md` |
+| 리버스 프록시·HTTPS | 없음. Amplify 기본 주소(HTTPS) + Next.js rewrites(`/api/*`, `/t/*`, `/files/*`) | 도메인 구매 없음(PRD 10.4). EC2 보안 그룹은 백엔드 포트만 연다 |
 | 운영 DB | RDS PostgreSQL 17, 자동 백업 7일 | EC2 보안 그룹에서만 접근 |
 | 파일 | S3 (이미지 경로만 공개 읽기) | |
 | 메일 | SES 이메일 주소 인증 + 샌드박스(인증된 수신 주소, 초당 1건) + SNS 토픽 | 도메인 인증이 없어 스팸함 분류 가능. 대안: Mailpit 녹화 |
