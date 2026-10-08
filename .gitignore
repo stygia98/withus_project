@@ -4,6 +4,7 @@ withus_backend/
 
 # 개인용 설정·작업 데이터
 CLAUDE.local.md
+shrimp-rules.md
 shrimp_data/
 .claude/settings.local.json
 .claude/plans/

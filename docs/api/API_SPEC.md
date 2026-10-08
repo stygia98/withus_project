@@ -239,7 +239,7 @@ rule 형식은 `docs/db/DB_SCHEMA.md` 5.1.
 | PUT | `/api/v1/templates/{templateId}` | O M S | 수정 (사용 중이면 409) |
 | DELETE | `/api/v1/templates/{templateId}` | O M S | 삭제 (참조 중이면 409) |
 | POST | `/api/v1/templates/{templateId}/duplicate` | O M S | 복제 |
-| POST | `/api/v1/templates/{templateId}/preview` | O M S | 렌더링 미리보기 |
+| POST | `/api/v1/templates/{templateId}/preview` | O M S | 렌더링 미리보기 (STAFF 는 `sampleCustomerId` 무시, 고정 샘플 값 사용) |
 | POST | `/api/v1/templates/{templateId}/test-send` | O M S | 테스트 발송 1건 |
 | POST | `/api/v1/files/images` | O M S | 이미지 업로드 (5MB, jpg/png/gif) |
 
@@ -255,16 +255,22 @@ rule 형식은 `docs/db/DB_SCHEMA.md` 5.1.
 
 - 치환자: `{{name}}`, `{{email}}`, `{{region}}`, `{{totalPurchase}}`, `{{couponUrl}}`. 기본값 문법 `{{name|고객}}`.
 - `(광고)`, 발신자 정보, 수신거부 링크는 저장 본문에 넣지 않는다. 발송 시 시스템이 삽입한다.
-- 오류: `TEMPLATE_IN_USE`(409), `TEMPLATE_INVALID_PLACEHOLDER`(400), `TEMPLATE_SUBJECT_REQUIRED`(400).
+- 오류: `TEMPLATE_IN_USE`(409), `TEMPLATE_INVALID_PLACEHOLDER`(400), `TEMPLATE_SUBJECT_REQUIRED`(400), `TEMPLATE_AD_COPY_NOT_ALLOWED`(400).
+- 광고성(`adYn=Y`) 템플릿에는 시스템이 자동으로 넣는 문구를 직접 쓸 수 없다: 메일 제목 앞의 `(광고)`·`[광고]`, SMS 본문 맨 앞의 `(광고)`, 본문의 `무료수신거부` 문구와 080 번호. 걸리면 `error.details` 에 `field`(`subject`/`body`)와 `found` 가 담긴다. 비광고 템플릿은 검사하지 않는다.
 
 **POST /templates/{id}/preview**
 
 ```json
-// 요청 (segmentId가 있으면 기본값으로 나갈 인원도 계산)
+// 요청 (segmentId가 있으면 기본값으로 나갈 인원도 계산, sampleCustomerId 는 O·M 만 사용 — STAFF 는 보내도 무시하고 고정 샘플 값으로 미리보기)
 { "sampleCustomerId": 1024, "segmentId": 7 }
-// 응답 data
-{ "subject": "(광고) 김민지님께 드리는 가을 선물", "html": "...", "smsBytes": null, "defaultValueCount": { "total": 12480, "usingDefault": 312 } }
+// 응답 data (메일)
+{ "subject": "(광고) 김민지님께 드리는 가을 선물", "html": "...", "text": null, "smsBytes": null, "smsType": null, "defaultValueCount": { "total": 12480, "usingDefault": 312 } }
+// 응답 data (SMS): subject·html 은 null, text 는 평문(이스케이프 없음)
+{ "subject": null, "html": null, "text": "(광고)위드어스 ...", "smsBytes": 62, "smsType": "SMS", "defaultValueCount": null }
 ```
+
+- `smsBytes` 는 (광고)·발신자·수신거부 문구를 포함한 값이며 ASCII 1바이트, 그 외 2바이트로 센다. 90바이트 초과면 `smsType` 이 `LMS` 다.
+- `defaultValueCount.total` 은 삭제 고객을 뺀 실제로 센 인원이다. 기본값 문법(`{{name|고객}}`)이 없는 템플릿은 `usingDefault` 가 0 이다.
 
 **POST /templates/{id}/test-send**
 
@@ -358,9 +364,13 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 ```
 
 - `key`는 요청 안에서만 쓰는 임시 식별자. 서버가 step_id로 바꿔 저장한다.
-- 저장 시 검증(실패 시 `WORKFLOW_INVALID_STRUCTURE` 400, `details`에 위반 목록): TRIGGER 1개, CONDITION 중첩 2단계 이내, 노드 15개 이하, 모든 경로 END, 순환 없음, 메일 이벤트 조건 앞에 SEND_EMAIL→WAIT, `{{couponUrl}}` 템플릿에 쿠폰 연결, 쿠폰 유효기간.
+- 저장 시 검증(실패 시 `WORKFLOW_INVALID_STRUCTURE` 400, `details`에 위반 메시지 문자열 목록): TRIGGER 1개, CONDITION 중첩 2단계 이내, 노드 15개 이하(요청은 50개까지), 모든 경로 END, 순환 없음, 모든 노드가 TRIGGER에서 닿음, 메일 이벤트 조건 앞에 **직전** SEND_EMAIL→WAIT, `{{couponUrl}}` 템플릿에 쿠폰 연결, 쿠폰이 존재하고 유효기간 안, WAIT 대기 1분~90일(정수), 노드 id 중복 없음, 노드 종류에 맞는 연결(END는 연결 없음, CONDITION은 yes·no, 그 외는 next), 노드 설정 정상(SEND는 templateId, CONDITION은 condition, PURCHASE_GTE는 amount).
+- 존재하지 않는 템플릿을 가리키면 `WORKFLOW_INVALID_STRUCTURE`(400). DRAFT가 아닌 캠페인에 PUT하면 `CAMPAIGN_INVALID_STATUS`(409). 같은 캠페인의 PUT은 한 번에 하나씩 처리된다.
+- GET 응답은 `{ "steps": [{ "stepId", "nodeType", "config", "next", "yes", "no", "depth" }] }`이고 `next`·`yes`·`no`는 다른 노드의 `stepId`(숫자)다.
 
 **POST /campaigns/{id}/workflow/validate 응답 data**
+
+`checks`는 구조와 상관없이 **항상 같은 코드 목록**(`TRIGGER_COUNT`, `NODE_COUNT`, `UNIQUE_NODE_IDS`, `LINKS_MATCH_NODE_TYPE`, `CONFIG_VALID`, `WAIT_DURATION_WITHIN_RANGE`, `COUPON_URL_REQUIRES_COUPON`, `COUPON_WITHIN_VALID_PERIOD`, `TEMPLATE_EXISTS`, `NO_CYCLE`, `DEPTH_WITHIN_LIMIT`, `ALL_PATHS_END_WITH_END`, `EMAIL_EVENT_REQUIRES_SEND_WAIT`, `ALL_NODES_REACHABLE`)으로 내려온다. `TEMPLATE_EXISTS`는 SEND 노드가 가리키는 템플릿이 모두 존재하는지 보며, 없으면 `passed=false`와 없는 템플릿 ID 목록을 메시지로 돌려준다(예외로 끊지 않는다). TRIGGER가 1개가 아니거나 노드가 15개를 넘거나 id가 정상이 아니면 뒤쪽 구조 검사 5개는 `passed=false`, "검사하지 못함"으로 내려온다.
 
 ```json
 {
@@ -647,12 +657,13 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | `CUSTOMER_INVALID_REGION` / `_PHONE` / `_DATE` | 400 | 정규화 실패 |
 | `CUSTOMER_CONSENT_EVIDENCE_REQUIRED` | 422 | 수신거부 해제에 증빙 메모 필요 |
 | `CUSTOMER_INVALID_EMAIL` / `_NAME` / `_AMOUNT` / `_CONSENT` | 400 | 업로드 행별 실패 사유 (이메일 없음·형식, 이름 50자 초과, 누적구매액 음수·형식, 수신동의 Y/N 아님). `failures[].reason` 에도 `CUSTOMER_INVALID_REGION`·`_PHONE`·`_DATE`·`CUSTOMER_DUPLICATE_EMAIL`(같은 파일 안 중복)을 쓴다 |
-| `UPLOAD_FILE_TOO_LARGE` / `_TOO_MANY_ROWS` / `_INVALID_HEADER` | 400 | 업로드 제한 |
+| `UPLOAD_FILE_TOO_LARGE` / `_TOO_MANY_ROWS` / `_INVALID_HEADER` | 400 | 업로드 제한 (고객 업로드 10MB·10,000행, 에디터 이미지 5MB 도 같은 코드) |
 | `UPLOAD_INVALID_FILE` | 400 | xlsx·csv 가 아니거나 읽을 수 없는 파일 |
+| `FILE_INVALID_TYPE` | 400 | 이미지 업로드 형식 오류 (jpg·png·gif 아님) |
 | `SEGMENT_INVALID_RULE` / `_TOO_MANY_CONDITIONS` | 400 | 조건 오류 |
 | `SEGMENT_IN_USE` | 409 | 캠페인이 참조 중 |
 | `TEMPLATE_IN_USE` | 409 | 예약·활성·일시정지 캠페인이 사용 중 |
-| `TEMPLATE_INVALID_PLACEHOLDER` / `_SUBJECT_REQUIRED` | 400 | 템플릿 오류 |
+| `TEMPLATE_INVALID_PLACEHOLDER` / `_SUBJECT_REQUIRED` / `_AD_COPY_NOT_ALLOWED` | 400 | 템플릿 오류 (광고 문구는 시스템 자동 삽입) |
 | `CAMPAIGN_INVALID_STATUS` | 409 | 현재 상태에서 불가능한 전이 |
 | `CAMPAIGN_SEND_WINDOW_EXCEEDED` | 422 | 광고성 발송이 20:50을 넘김 |
 | `CAMPAIGN_COUPON_REQUIRED` | 422 | `{{couponUrl}}` 템플릿에 쿠폰 미연결 |
