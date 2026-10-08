@@ -23,7 +23,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 | 수신거부 후 해당 고객에게 더 이상 발송되지 않는다 | 수신거부 처리(suppression + 동의 N), 발송 가능 판정 `ConsentService.isSendable`·`filterSendable` | `customer/UnsubscribeApiTest`(처리), `customer/ConsentServiceTest#수신거부_목록에_있으면_동의_Y_여도_불가_다른_채널은_영향_없음`, `#여러_고객_일괄_판정은_건별_판정과_같다` | 팀원2 (적재 `campaign/SendQueueServiceRecipientTest#일회성_적재는_동의_확인을_청크당_한_번에_하고_거부는_SKIPPED다`(backend #48), 발송 직전 재확인 `campaign/SendDispatcherTest#적재_후_수신거부한_고객은_발송_직전_재확인에서_SKIPPED가_된다`) |
 | 적재 후 발송 전에 수신거부한 고객에게는 발송되지 않는다(SKIPPED) | 위와 같음 — 수신거부 즉시 `isSendable` 이 false | 위와 같음 | 팀원2 |
 | 관리자가 구매를 등록하면 누적구매액이 늘고, `PURCHASE_GTE` 분기와 전환율에 반영된다 | 구매 등록·누적구매액, 쿠폰 선택 시 `CouponService.markUsed` 호출 | `customer/PurchaseApiTest#구매를_등록하면_누적구매액에_더하고_최신순으로_보여준다`, `#쿠폰은_이_고객_발급분_미사용_구매일이_유효기간_안일_때만_쓸_수_있다` | 팀원2 (`PURCHASE_GTE` 분기), 팀원3 (전환율) |
-| 동의 일시를 2년 전으로 바꾼 테스트 고객에게 수신동의 확인 안내가 발송된다 | F-12 배치: 대상 선정·NOTICE 적재·`consent_notified_at` 갱신 | `customer/ConsentNoticeBatchTest` 10건 (backend #40, 2026-10-02 병합), 본문용 동의 일시 `customer/ConsentServiceTest#동의_일시는_채널별로_돌려주고_동의_N_삭제_없는_고객은_비어_있다_F12_NOTICE` (`ConsentService.findConsentAt`, backend #84) | 팀원2 (NOTICE 본문 렌더링·08:00~20:50 보류, backend 이슈 #81 PL 결정 — 렌더링 미병합) — 렌더링 병합 전에는 `withus.scheduler.consent-notice.enabled=false`. **운영 시연 제외**: 운영에서 동의 일시를 2년 전으로 만들 방법이 없어(변경 API 없음, 운영 DB 직접 수정 금지) local 시드 99번·Mailpit 확인으로 충족한다(#81 결정 A) |
+| 동의 일시를 2년 전으로 바꾼 테스트 고객에게 수신동의 확인 안내가 발송된다 | F-12 배치: 대상 선정·NOTICE 적재·`consent_notified_at` 갱신 | `customer/ConsentNoticeBatchTest` 10건 (backend #40, 2026-10-02 병합), 본문용 동의 일시 `customer/ConsentServiceTest#동의_일시는_채널별로_돌려주고_동의_N_삭제_없는_고객은_비어_있다_F12_NOTICE` (`ConsentService.findConsentAt`, backend #84) | 팀원2 (NOTICE 본문 렌더링·08:00~20:50 보류 — 렌더링 backend #87, 2026-10-07 병합: `campaign/ConsentNoticeCopyTest`·`MessageComposerNoticeTest`·`SendDispatcherNoticeTest`) — **local 충족**: PL 이 2026-10-07 `consent-notice.enabled=true` 로 띄운 실제 앱에서 시드 99번이 적재 → SENT, Mailpit 수신(전송자·동의 날짜·수신거부 링크, `(광고)`·추적 치환 없음) 확인(#87 PL 리뷰). **운영 시연 제외**: 운영에서 동의 일시를 2년 전으로 만들 방법이 없어(변경 API 없음, 운영 DB 직접 수정 금지) local 시드 99번·Mailpit 확인으로 충족한다(#81 결정 A) |
 | 이름이 없는 고객에게 "안녕하세요 고객님"처럼 기본값으로 발송된다 | 이름을 비워 둘 수 있는 등록·업로드 | `customer/CustomerNormalizerTest#선택_항목의_빈_값은_null`(등록·업로드 공용 정규화) | 팀원3 (렌더러 기본값), 팀원2 (발송) — local 시드 25·50·75·100번은 이름 없음 |
 | 발송 큐가 10만 건 처리 중이어도 휴면 배치 등 다른 스케줄 작업이 멈추지 않는다 | 휴면 배치·F-12 배치는 `fixedDelay` 10분, 03시 이후 그날 첫 회차 | `customer/DormantBatchTest#새벽_3시_이후_그날_첫_회차에만_실행한다` | PL (스케줄러 스레드 풀 `spring.task.scheduling.pool.size=5`), 팀원2 (발송 작업) |
 | 반송·스팸신고 (PRD 8.2 SES 웹훅, 10.3 운영 시나리오 전제) | 서명 검증, suppression·동의 N, 영구 반송은 send_log BOUNCED | `customer/SesWebhookTest` 7건 | PL (W5 SNS 구독 URL·`SES_TOPIC_ARN`) |
@@ -67,7 +67,7 @@ W5 운영 재검증(roadmap 3장)은 이 표의 "운영 확인" 열을 따라 �
 **환경변수**
 - `SES_TOPIC_ARN` — SES 반송·스팸신고 SNS 토픽 ARN. **비우면 웹훅이 모든 요청을 무시**한다(로그 `SES 웹훅: 등록하지 않은 토픽 무시`). `TECH_STACK.md` 의 옛 이름 `SES_SNS_TOPIC_ARN` 은 쓰지 않는다(withus_project #18)
 - `HMAC_SECRET` — 수신거부 토큰 서명 키, 32자 이상, 운영 필수. 바꾸면 그 전에 나간 메일의 수신거부 링크가 모두 "유효하지 않은 링크"가 된다
-- `WITHUS_SCHEDULER_CONSENT_NOTICE_ENABLED` — F-12 배치. 기본 `false`. 팀원2 NOTICE 렌더링(backend 이슈 #81)이 병합되고 local Mailpit 확인이 끝난 뒤 `true`. 운영 재검증에서 F-12 실제 발송은 확인하지 않는다(2장, #81 결정 A)
+- `WITHUS_SCHEDULER_CONSENT_NOTICE_ENABLED` — F-12 배치. 기본 `false`. 켜는 조건(NOTICE 렌더링 backend #87 병합 + local Mailpit 확인)은 2026-10-07 충족했다. 기본값은 `false` 그대로 두고 운영 값은 W5 에 PL 이 정한다(#87 PL 리뷰). 운영 재검증에서 F-12 실제 발송은 확인하지 않는다(2장, #81 결정 A)
 
 **SES → SNS → 웹훅 연결 (PL)**
 1. SES 인증 발신 주소의 **Feedback notifications** 에서 Bounce·Complaint 를 SNS 토픽으로 보낸다(backend #24 PL 리뷰)
