@@ -85,12 +85,16 @@ W5 운영 재검증(roadmap 3장)은 이 문서의 "W5에 남은 확인"을 따�
 
 60건 쪽 로그는 `Shutdown phase ... ends with 1 bean still running after timeout of 30000ms: [taskScheduler]` 직후 `HikariPool-1 - Shutdown initiated`였다. Spring 종료 단계 기본 제한(30초) 안에 스케줄러가 끝나지 않으면 **스케줄러가 도는 채로 DB 풀이 먼저 닫혀**, 이후 `revertUnprocessed`의 DB 호출이 실패하고 선점분이 `SENDING`으로 남아 10분 뒤 `UNKNOWN_RESULT`가 된다. 즉 #91의 복귀 경로는 이 조건의 실제 정상 종료에서는 도달하지 못한다. 영향은 발송 중에 재시작할 때 최대 약 20건 누락(중복 없음)이며, 해결 방향은 backend 이슈 #92에 적었다(종료 신호를 먼저 받아 DB가 살아 있는 동안 선점분을 `PENDING`으로 복귀). 따라서 **재시작은 발송이 끝난 뒤에 한다.**
 
+**→ 2026-10-08 해결(backend `fix/dispatcher-graceful-shutdown`, #92).** `SendDispatcher`가 `ContextClosedEvent`(Lifecycle 정지·DB 풀 종료보다 먼저 발행)로 종료 신호를 받아 현재 건만 마치고 남은 선점분을 `PENDING`으로 되돌린다. 위 60건 시나리오를 실제 `close()`로 재현하는 `SendDispatcherGracefulShutdownTest`가 수정 후 통과(종료 약 1초, `SENDING` 0, `attempt_count` 불변, 이후 60건 모두 1회씩 발송)하고, 수정을 빼면 30초 제한에 걸려 실패함을 확인했다. 강제 종료(`kill -9`)의 누락은 설계대로 남으므로 재시작은 여전히 발송이 끝난 뒤가 안전하다.
+
 또 #91의 통합 테스트(`SendDispatcherInterruptRevertTest`)는 건당 처리가 1초를 넘는 환경(PL 환경)에서 `TokenBucket` 대기가 생기지 않아 결정적으로 실패해 변경을 요청했고, 느린 버킷을 끼우는 수정안을 검증해 전달했다.
 
 ### 3.2 1만 명 SEGMENT_SCHEDULED 적재 시간 (항목 30)
 - 10,027명 대상 워크플로우 시작: 인스턴스 10,027개 생성은 요청 안에서 2.6초, 이후 엔진이 500건 묶음을 한 번의 스케줄러 호출 안에서 끊김 없이 이어 처리해 **전원 `send_log` 적재, 고객당 1건, 중복 0**.
 - 다만 이 컴퓨터(Docker 볼륨의 디스크 fsync가 건당 약 150~330ms)에서는 **1,025초(초당 10.5건)** 가 걸렸다. 인스턴스마다 트랜잭션을 따로 커밋하는 구조라 backend 이슈 #73에서 확인한 fsync 병목의 영향을 그대로 받는다.
 - PRD의 "한 번의 스케줄 주기 안"이 60초 이내인지, 한 번의 스케줄러 호출 안에서 모두 처리되면 되는지가 모호하다. PL 해석은 후자(한 번의 호출 안에서 중단 없이 전원 처리)이고, 소요 시간 목표는 W5 RDS 측정값을 본 뒤 정한다. 이 규모의 측정 도구는 backend #88(`WorkflowSegmentScheduledLoadCheck`)로 추가됐고, 작성자 환경에서는 17.7초(초당 568건)였으나 PL 환경에서는 같은 규모가 1,025초(초당 10.5건)로 디스크 fsync 에 좌우된다. W5 RDS 에서 같은 도구로 비교한다.
+- **2026-10-08 재측정**: 같은 PC 에서 Docker 대신 PC 에 설치한 PostgreSQL 17.11 로 같은 도구를 돌리니 10,027명이 **13.1초**(인스턴스 생성 0.6초 + 엔진 1회 12.6초, 초당 798건), 전원 `PENDING` 적재·실패 0. 1,025초의 원인은 Windows Docker 볼륨의 fsync 였고 코드 병목이 아님을 뒷받침한다.
+- 큐 선점용 부분 인덱스(`(priority, send_log_id) WHERE status = 'PENDING'`, backend #70·#71 의 "부하 3/3")는 **추가하지 않는다**(2026-10-08): 선점 쿼리는 PENDING 10만 건에서도 호출당 70~85ms·처리 시간의 약 2%로 병목이 아니고, 인덱스는 적재마다 쓰기(WAL)를 늘려 #73 의 실제 병목(커밋 fsync)을 키우며, 기능 동결 기간이라 스키마 변경을 피한다. RDS 측정에서 선점이 병목으로 보이면 그때 새 Flyway 로 검토한다.
 
 ### 3.3 프론트 공개 페이지는 브라우저로 확인함 (항목 6, 11, 25)
 처음 점검에서는 공개 페이지와 브라우저의 `document.cookie`·`localStorage` 비노출을 API·쿠키 속성까지만 확인했으나, 같은 날 후속 점검에서 **프로덕션 빌드한 프론트(3100) + 실제 백엔드 + Playwright**로 확인했다.
@@ -119,7 +123,26 @@ W5 운영 재검증(roadmap 3장)은 이 문서의 "W5에 남은 확인"을 따�
 - 운영 SES 실제 도착, SES 주소 인증, 실제 스로틀링(항목 3, 32)
 - S3 업로드와 `images/*` 공개 읽기 정책(backend #86)
 - 운영(Amplify·HTTPS)에서 프론트 공개 페이지·쿠키(`Secure`)·`/t/*` 프록시를 브라우저로 한 번 더 확인(항목 6, 11, 25, 3.3)
-- 발송 중 재시작 시 선점분 누락(3.1, backend 이슈 #92): 해결 전에는 배포·재시작을 발송이 끝난 뒤에 한다
-- 프로필 전환만으로 운영 동작(항목 10)
+- 발송 중 재시작: 정상 종료 누락은 #92 로 해결(3.1). 강제 종료 누락은 설계대로이므로 배포·재시작은 발송이 끝난 뒤에 한다
+- 프로필 전환만으로 운영 동작(항목 10) — `application-prod.yml` 로 빈 로컬 DB 기동까지는 확인(6장). 절차는 `infra/aws/README.md`
 - RDS에서 1만 명 적재 시간과 커밋 시간(`EnqueuePhaseCheck`, 항목 30)
 - 항목 24는 운영 시연에서 제외하고 local(시드 99번, Mailpit)에서 확인한다
+
+## 6. 로컬 마무리 점검 (2026-10-08, PL 1인 작업 전환 후)
+
+팀원 3명이 빠져 PL 혼자 AWS 배포 직전까지를 마무리했다. 기준 코드는 backend `dev`(`d943752`) + `fix/dispatcher-graceful-shutdown`(#92) + `chore/prod-profile` 을 로컬에서 합친 상태, 환경은 Docker 없이 PC 에 설치한 PostgreSQL 17.11 + Mailpit(winget).
+
+| 확인 | 결과 |
+|---|---|
+| 백엔드 전체 테스트 | 실패 0 (신규 `SendDispatcherGracefulShutdownTest`·`ProdProfileConfigTest` 포함). Mailpit 없이 돌리면 `SendDispatcher*` 7건이 SMTP 연결 거부로 실패한다 — 환경 전제(README 반영) |
+| 프론트 `lint`·`build` | 통과 |
+| 일회성 발송 E2E(프론트 3000 경유) | 세그먼트 "서울·경기 구매 10만 원 이상" 35명 + 광고성 쿠폰 메일 → `SENT` 30 / `SKIPPED(NOT_SENDABLE)` 5(시드 메일 수신거부), 초당 1건으로 약 33초, Mailpit 30통 |
+| 메일 내용 | 제목 `(광고)`, 하단 발신자·수신거부, `List-Unsubscribe`·`List-Unsubscribe-Post` 헤더, 일반 링크·오픈 픽셀만 `/t/*` 치환, 쿠폰(`/c/`)·수신거부 링크는 치환 안 됨, 모든 주소가 프론트(3000) 기준 |
+| 추적·지표 | 오픈 픽셀 200 `image/gif`, 클릭 302 → 원래 주소, 사람 이벤트로 저장, 없는 linkId 변조 클릭은 저장 안 됨. 캠페인 KPI 발송 30·오픈 1·클릭 1 일치 |
+| 쿠폰 | GET 2회 불변(`used_at` NULL) → POST 1회 `USED` → 재시도 `COUPON_ALREADY_USED`. 브라우저 카드 "사용 완료" |
+| 수신거부 | GET 불변(동의 Y) → POST 2회 멱등(이력 1건, `suppression` 1건, 동의 N). 브라우저 화면 이름 마스킹·채널 상태 표시 |
+| 20:50 컷오프 | 20:50 시작 광고 캠페인 `estimate` → `allowed:false`, `SEND_WINDOW_EXCEEDED`, 다음 가능 시각 다음 날 08:00. 예약 API 도 거부 |
+| prod 프로필 기동 | 빈 DB 에 `SPRING_PROFILES_ACTIVE=prod` 로 기동: 마이그레이션 4개만(V1·V20·V21·V30), 시드 0, OWNER 1회 생성, 인증 쿠키 `Secure; HttpOnly; SameSite=Lax`, Swagger·api-docs 404 |
+
+- `XSRF-TOKEN` 쿠키는 요청이 HTTPS 인지로 `Secure` 를 정해 HTTP 인 Amplify → EC2 구간에서는 붙지 않는다. JS 가 읽는 CSRF 토큰이라 단독으로는 쓸 수 없고 인증 쿠키는 Secure 다. 인증 영역 변경이라 고치지 않고 W5 브라우저 점검에서 함께 본다(`infra/aws/README.md` 주의).
+- 점검용 데이터: 로컬 DB 에 캠페인 505(완료)·506(DRAFT)이 남아 있고 시드 고객 96번은 메일·SMS 수신거부 상태다. 시드를 다시 깔려면 DB 를 새로 만든다.

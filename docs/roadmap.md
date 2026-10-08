@@ -3,6 +3,8 @@
 > 기준 문서: `docs/prd.md` (PRD v2.3) · 기간 5주(W1~W5) · 인원 4명(PL + 팀원 3명)
 >
 > 주차(W1~W5)는 **예상 일정**이다. 실제 시작일·소요 시간은 기록하지 않는다. 체크박스는 PL이 PR 병합 시 갱신한다.
+>
+> **2026-10-08 체제 변경:** 팀원 3명이 빠지고 PL 혼자 남은 작업을 맡는다. 이날 AWS 배포 직전까지 로컬에서 할 수 있는 일을 마쳤고(`docs/roles/pl-verification.md` 6장), 남은 일은 모두 W5 의 AWS 작업이다. 아래 팀원 항목의 남은 일도 PL 이 한다.
 
 일회성 발송을 W2에 먼저 끝까지 연결한 뒤, W3에 워크플로우·수신거부·쿠폰으로 확장하고, W4에 AI와 통합 테스트를 마쳐 기능을 동결한다. W5는 운영 배포와 시연 검증만 한다.
 
@@ -114,18 +116,18 @@
 
 **PL**
 - [ ] PRD 10.3 완료 기준 전체 점검, 통합 테스트, 코드 리뷰 — 로컬 점검 완료(2026-10-07, `docs/roles/pl-verification.md`): 40개 중 충족 37(일부는 W5·직접 재현 불가 포함), ❌ 0(항목 24 F-12 는 backend #87 머지로 해소), ⏳ 2(항목 10 배포 보류, 항목 30 1만 명 적재 시간은 RDS 재측정), ➖ 1(A/B). W5 운영 재검증이 끝나면 완료
-- [ ] 운영 배포 스크립트 준비(`infra/aws/`), 배포 리허설(Amplify → EC2 프록시 확인)
+- [ ] 운영 배포 스크립트 준비(`infra/aws/`), 배포 리허설(Amplify → EC2 프록시 확인) — 스크립트·절차서·환경변수 템플릿·IAM/S3 정책과 backend `application-prod.yml`(빈 로컬 DB 로 prod 기동 확인)은 2026-10-08 완료. 리허설은 AWS 가 필요해 W5
 
 **팀원1**
 - [x] 수신동의 2년 확인 안내(F-12, NOTICE 발송·시간 제한) — 대상 선정·NOTICE 적재·시간 제한(backend #40·#49, 쿨다운 30일 PL 확정), 본문용 동의 일시 조회 `ConsentService.findConsentAt`(backend #84), NOTICE 본문 렌더링(backend #87, 코드 고정 문구+치환). PL 이 2026-10-07 local 에서 시드 99번으로 실제 앱·Mailpit 수신까지 확인. `consent-notice.enabled` 기본값은 `false` 그대로이고 운영 설정은 W5(`WITHUS_SCHEDULER_CONSENT_NOTICE_ENABLED`). 운영 시연은 제외(PL 결정, backend #81)
-- [ ] 버그 수정
+- [x] 버그 수정 — W4 까지 접수된 결함 없음. 이후 발견분은 W5 "발견된 버그 수정"에서 PL 이 처리
 
 **팀원2**
-- [ ] 워크플로우 안정화(10만 건 적재 부하 확인, 우선순위 검증) — 부하 1/3·2/3 완료(backend #70·#71): 10만 건 대기 중에도 priority 2 가 먼저 나가고(PL 환경 앞질러 나간 priority 3 이 17건 이하) 복구·자동 완료가 멈추지 않음. CONDITION 단계 캐시로 5,000건 판정 DB 왕복 감소(backend #72). 적재 시간(이슈 #73)은 DB 왕복이 아니라 커밋의 WAL fsync 가 좌우함을 PL 환경에서 확인(총 73.7초 중 fsync 53.2초, 디스크 동기 쓰기 150~330ms) — 운영(RDS) 재현 여부는 W5 에서 `EnqueuePhaseCheck`(backend #77)로 확인. 부하 3/3 대기
-- [ ] (선택) React Flow 캔버스 — A/B 테스트는 범위에서 제외(PL 결정 2026-10-06, 메인 #12)
+- [x] 워크플로우 안정화(10만 건 적재 부하 확인, 우선순위 검증) — 부하 1/3·2/3 완료(backend #70·#71): 10만 건 대기 중에도 priority 2 가 먼저 나가고(PL 환경 앞질러 나간 priority 3 이 17건 이하) 복구·자동 완료가 멈추지 않음. CONDITION 단계 캐시로 5,000건 판정 DB 왕복 감소(backend #72). 적재 시간(이슈 #73)은 DB 왕복이 아니라 커밋의 WAL fsync 가 좌우함을 PL 환경에서 확인(총 73.7초 중 fsync 53.2초, 디스크 동기 쓰기 150~330ms) — 운영(RDS) 재현 여부는 W5 에서 `EnqueuePhaseCheck`(backend #77)로 확인. 부하 3/3(선점용 부분 인덱스)은 **추가하지 않기로 결정**(2026-10-08, 선점이 병목이 아니고 인덱스가 적재 fsync 를 키움). 같은 날 Docker 없는 PostgreSQL 에서 1만 명 한 주기 적재 13.1초. 정상 종료 시 선점분 누락(backend #92)도 수정·테스트 완료. RDS 측정은 W5 운영 재검증 항목으로 이관
+- [ ] ~~(선택) React Flow 캔버스~~ — 범위 제외(2026-10-08, 1인 작업 전환. 리스크표 "막히면 React Flow 는 포기"). A/B 테스트도 범위 제외(PL 결정 2026-10-06, 메인 #12)
 - [x] `SesMessageSender`(AWS SDK v2 `sesv2`, 원시 MIME·List-Unsubscribe, `withus.mail.type=ses`) — 구현 backend #85. PL 리뷰에서 SDK 자체 재시도가 같은 메일을 4번 보내는 중복 발송 경로를 실측으로 찾아 `doNotRetry()` 와 회귀 테스트(`SesMessageSenderRetryTest`)로 고쳤다. PL 승인은 **코드·의존성만**(backend 이슈 #78), 실제 SES 호출 검증과 SES 주소 인증·운영 설정은 W5
 - [x] `S3FileStorage`(AWS SDK v2 `s3`, 에디터 이미지 공개 읽기 URL 그대로 반환, `withus.storage.type=s3`) — 구현 backend #86(`images/<UUID>.<확장자>` 키, 로컬 동작 불변). 이미지 업로드만, CSV 저장은 별도. **"이미지 경로만 공개 읽기"(PRD 8.5)는 버킷 정책으로 지키므로 W5 에 `images/*` 에만 `s3:GetObject` 를 허용**하고, 실제 S3 업로드·공개 URL 접근 검증도 W5
-- 팀원2 구현 항목(SES #85, S3 #86, F-12 NOTICE 렌더링 #87)은 2026-10-07 모두 머지 완료. 남은 것은 워크플로우 안정화(RDS 측정 대기)와 선택 항목
+- 팀원2 구현 항목(SES #85, S3 #86, F-12 NOTICE 렌더링 #87)은 2026-10-07 모두 머지 완료. 2026-10-08 안정화 로컬 부분 완료, 남은 RDS 측정은 W5
 
 **팀원3**
 - [x] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장) (backend #16, frontend #4 — W4 항목 선행 완료)
