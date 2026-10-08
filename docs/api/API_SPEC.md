@@ -373,6 +373,10 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 }
 ```
 
+**GET /campaigns/{id}/instances 응답 항목**: `instanceId`, `customerId`, `currentStepId`, `status`, `nextRunAt`, `retryCount`, `lastError`, `createdAt`, `updatedAt` (페이징 공통 규칙).
+
+- `currentStepId`는 인스턴스가 대기(WAIT)에 들어갈 때만 갱신된다. 진행 중(`WAITING`·`RUNNING`)이면 다음에 실행할 단계지만, **완료·실패·취소(`COMPLETED`·`FAILED`·`CANCELLED`)된 인스턴스에서는 마지막으로 기록된 단계일 뿐 END 가 아니며 표시 용도가 아니다**(backend 이슈 #90 4번, A안). 완료 여부는 `status`와 `nextRunAt`(없음)으로 판단한다.
+
 ## 7. 쿠폰 (팀원3 · `coupon`)
 
 | 메서드 | 경로 | 권한 | 설명 |
