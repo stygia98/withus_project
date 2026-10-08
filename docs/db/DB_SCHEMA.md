@@ -114,7 +114,7 @@ CREATE TABLE customer (
     sms_consent_at       TIMESTAMPTZ,
     dormant_yn           CHAR(1)      NOT NULL DEFAULT 'N' CHECK (dormant_yn IN ('Y','N')),
     dormant_at           TIMESTAMPTZ,
-    consent_notified_at  TIMESTAMPTZ,                          -- F-12 직전 안내 일시
+    consent_notified_at  TIMESTAMPTZ,                          -- F-12 직전 안내 일시: 채널 구분 없는 가장 최근 안내(표시용, 발송된 NOTICE 의 sent_at). 대상 판정은 채널별 send_log 기준
     source               VARCHAR(10)  NOT NULL CHECK (source IN ('MANUAL','UPLOAD')),
     deleted_yn           CHAR(1)      NOT NULL DEFAULT 'N' CHECK (deleted_yn IN ('Y','N')),
     created_at           TIMESTAMPTZ  NOT NULL DEFAULT now(),
@@ -314,6 +314,7 @@ CREATE TABLE send_log (
     sent_at              TIMESTAMPTZ,
     created_at           TIMESTAMPTZ  NOT NULL DEFAULT now(),
     updated_at           TIMESTAMPTZ  NOT NULL DEFAULT now(),                  -- SENDING 10분 초과 판단에 사용
+    template_id          BIGINT       REFERENCES template (template_id) ON DELETE SET NULL,  -- TEST 만 (V21 보완 컬럼)
     CONSTRAINT uq_send_log_step           UNIQUE (instance_id, step_id),
     CONSTRAINT uq_send_log_tracking_token UNIQUE (tracking_token)
 );
@@ -463,6 +464,8 @@ PENDING ──(잡기·커밋)──▶ SENDING ──(성공)──▶ SENT ─
 PENDING ──(발송 직전 재확인 실패)──▶ SKIPPED
 ```
 
+- BOUNCED는 `SENT`에서만 간다(영구 반송 웹훅, `markBounced`의 `status = 'SENT'` 조건). `FAILED`·`SKIPPED`·`SENDING`에서는 BOUNCED로 가지 않는다. 스팸신고는 `SENT` 그대로 둔다(API_SPEC 9장).
+
 **`workflow_instance.status`**: `WAITING` → `RUNNING` → (`WAITING` | `COMPLETED` | `FAILED`), 캠페인 종료·고객 삭제 시 `CANCELLED`. `RUNNING`으로 10분 넘게 남으면 `WAITING`으로 복구.
 
 **`campaign.status`**: PRD 6.7 참고.
@@ -509,6 +512,8 @@ PRD 7장에 없지만 구현에 필요해 추가했다. PRD 갱신 대상이다.
 | `send_log` | `recipient` | 테스트 발송(고객 없음)과 발송 시점 주소 기록 |
 | `consent_history` | `note` | 관리자가 수신거부를 해제할 때 증빙 메모 |
 | `campaign` | `created_by` | 작성자 추적 (다른 마스터 테이블과 일관성) |
+| `send_log` | `template_id` | 테스트 발송(V21). TEST 는 campaign_id·step_id 가 없어 렌더링할 템플릿을 알 수 없다. TEST 만 값이 있고 나머지는 NULL. 템플릿이 삭제되면 `ON DELETE SET NULL` |
+| `campaign` | `start_claimed_at` | 시작 선점 표시(V20). 동시에 `start()` 를 부르는 요청 중 한 명만 적재·시작하게 한다. NULL 이면 아무도 시작 중이 아님, 10분 넘은 값은 낡은 선점으로 무시 |
 
 ## 9. 시드 데이터 (`R__seed_local.sql`, local 프로필 전용)
 
@@ -516,5 +521,56 @@ PRD 7장에 없지만 구현에 필요해 추가했다. PRD 갱신 대상이다.
 - `R__` 파일은 내용이 바뀔 때마다 모든 `V` 마이그레이션 뒤에 다시 실행된다. 따라서 **여러 번 실행해도 결과가 같게** 작성한다 (`INSERT ... ON CONFLICT DO NOTHING`, 고정 키 기준 upsert 등).
 
 - OWNER 계정은 시드가 아니라 애플리케이션 시작 시 환경변수로 1개 생성한다.
-- 로컬 시연용: 고객 100명(지역·나이·구매액 분포), 세그먼트 2개, 템플릿 3개(메일 2, SMS 1), 쿠폰 2개(정액·정률).
+- 로컬 시연용: 고객 100명(지역·나이·구매액 분포), 세그먼트 2개, 템플릿 5개(광고 메일 2·SMS 1, 비광고 메일 1·SMS 1), 쿠폰 2개(정액·정률).
+- 파일: `withus_backend/src/main/resources/db/seed/local/R__seed_local.sql`
+- **`db/migration` 아래(하위 폴더 포함)에 두면 안 된다.** Flyway 는 location 을 하위 폴더까지 재귀로 스캔하므로, 운영(`locations: classpath:db/migration`)에도 시드가 적용된다(이슈 #46에서 확인: 운영 설정으로 빈 DB 를 마이그레이션하면 고객 100명이 생성됨). 시드는 `db/seed/local` 에 두고 `application-local.yml` 의 `locations` 에만 추가한다. 백엔드 `FlywayLocationTest` 가 이를 확인한다.
+- **시드 작성자 계정** `seed@withus.local`(STAFF, 비활성, 로그인 불가): Flyway가 OWNER 생성(앱 시작 후)보다 먼저 실행되므로 세그먼트·템플릿의 `created_by` 용으로 시드가 만든다. OWNER가 아니라 최초 OWNER 생성에는 영향이 없다.
+- 고객 데이터 구성 (테스트 시나리오용):
+
+| 항목 | 값 | 확인 용도 |
+|---|---|---|
+| 이메일 | `customer001@example.com` ~ `customer100@example.com` | |
+| 지역 | SEOUL 40 / GYEONGGI 30 / BUSAN 30 | 세그먼트 지역 조건. 지역 코드 전체 목록은 팀원1이 정규화 매핑에서 확정 |
+| 나이·가입일·누적구매액 | 20~60세, 최근 3~300일, 0~19만 원 | 세그먼트 조건 |
+| 이름 없음 | 4명 (25·50·75·100번) | 치환자 기본값 "고객" (PRD 10.3) |
+| 메일 수신거부 / SMS 수신거부 | 10명(10의 배수) / 33명(3의 배수) | 발송 제외·SKIPPED |
+| 메일 동의 2년 경과 | 1명 (99번) | F-12 수신동의 안내 |
+| 세그먼트 1 "서울·경기 구매 10만 원 이상" 대상 | 35명 | PRD 10.3 시연 시나리오 |
+| 세그먼트 2 "최근 90일 가입·메일 수신동의" 대상 | 27명 (시드 넣은 날 기준) | |
 - Flyway `locations`를 프로필별로 나눠 운영 DB에는 시드가 들어가지 않게 한다.
+- 쿠폰 2개의 유효기간은 시드를 처음 넣은 날의 30일 전부터 60일 뒤까지다(아래 시연 데이터의 과거 발급·사용일이 기간 안에 들어오게).
+
+**시연용 발송·추적·쿠폰 데이터 (`R__seed_local_demo.sql`, project #12 PL 결정)**
+
+- 파일: 같은 폴더의 `R__seed_local_demo.sql`. Flyway 는 `R__` 를 설명의 사전순으로 실행하므로 이름이 `seed local` 뒤여야 한다(`R__seed_demo` 는 앞이라 안 됨). `FlywayLocationTest` 가 순서를 확인한다.
+- 대시보드·성과 리포트·AI-02·AI-03 이 빈 화면 없이 보이게 한다. 모든 시각은 실행 시점 기준 상대값이다.
+
+| 캠페인 | 상태 | 발송 시점 | 내용 |
+|---|---|---|---|
+| `[시연] 가을 감사 쿠폰 발송` | ONE_TIME COMPLETED | 5일 전 | 세그먼트 1, 쿠폰 '5,000원 할인', FAILED 3건, 봇 이벤트 일부(`bot_yn = 'Y'`), 쿠폰 사용(고객 페이지 경로) |
+| `[시연] 신규 가입 환영 메일` | ONE_TIME COMPLETED | 12일 전 | 세그먼트 2. 기본 7일 KPI 밖, 14일 차트·30일 필터에서 보임 |
+| `[시연] 9월 정기 소식` | ONE_TIME COMPLETED | 25일 전 | 메일 동의 전체. AI-02 시간대 추천에 필요한 사람 이벤트(최근 90일 100건 이상)를 채움 |
+| `[시연] 신규 고객 환영 여정` | WORKFLOW ACTIVE | 6일·4일·1일 전 시작 | PRD 6.4 구조(노드 11개): 환영 메일 → 2일 대기 → 클릭 여부 → (클릭) 구매 10만 원 이상이면 VIP 쿠폰 메일 / 미만이면 일반 쿠폰 메일, (미클릭) SMS, SMS 수신거부는 SKIPPED |
+
+- 빈 DB 기준 건수(2026-10-06 확인): `send_log` 196(SENT 187), `track_event` 119(봇 2), `coupon_issue` 32(사용 4).
+- **넣지 않는 것**: PENDING·SENDING 발송(로컬 발송 작업이 실제로 보내 버림), `purchase`(누적구매액은 customer 도메인 쓰기), `ai_report`, A/B.
+- `[시연] 가을 감사 쿠폰 발송` 캠페인이 이미 있으면 전체를 건너뛴다(재실행 대비).
+- **W5 시연 전날 날짜 맞추기**: 시각이 처음 적용한 날 기준이라 며칠 지나면 대시보드 기본 "최근 7일" KPI 가 비어 보인다. 시연 전날 시연할 PC 에서 로컬 DB 를 다시 만든다.
+  1. 백엔드를 끄고 `cd infra && docker compose down -v && docker compose up -d` (DB 볼륨 삭제 — 직접 만든 고객·캠페인도 모두 지워진다)
+  2. 백엔드를 local 프로필로 기동 → Flyway 가 `V` 마이그레이션 → `seed local` → `seed local demo` 순으로 다시 적용한다
+  3. 대시보드 "최근 7일" 에 쿠폰 캠페인(5일 전)이 보이는지 확인
+  - 다른 데이터를 남기고 시연 데이터만 새로 넣고 싶으면 project #12 의 삭제 SQL 을 실행한 뒤 `DELETE FROM flyway_schema_history WHERE description = 'seed local demo';` 도 함께 실행하고 백엔드를 다시 띄운다. 반복 마이그레이션은 **파일 체크섬이 바뀔 때만** 다시 실행되므로, 데이터만 지우면 시연 데이터가 다시 들어가지 않는다.
+- 1일 전 시작한 워크플로우 인스턴스는 WAITING 이고 `next_run_at` 이 내일이다. **워크플로우 엔진(backend #35)이 병합된 뒤에는 로컬에서 그 시각에 이어서 진행되어 실제로 발송된다**(Mailpit 으로 수신).
+
+## 10. V1 이후 스키마 변경
+
+V1은 동결이므로 이후 변경은 담당 대역의 새 파일로만 한다. 변경할 때마다 이 표에 한 줄씩 추가한다.
+
+| 파일 | 담당 | 변경 | 이유 |
+|---|---|---|---|
+| `V30__track_link_unique_url.sql` | 팀원3 | `CREATE UNIQUE INDEX uq_track_link_template_url ON track_link (template_id, md5(original_url))` | 발송 시 `TrackingLinkService.rewrite`가 템플릿의 고정 링크를 자동 등록한다. 같은 템플릿의 같은 URL은 한 행만 두고, 동시 발송은 `INSERT ... ON CONFLICT (template_id, md5(original_url)) DO NOTHING`으로 처리한다. `original_url`은 길이 제한 없는 TEXT라 btree 키 한도를 피하려고 md5로 건다 |
+
+**`track_link` 등록 규칙 (V30 기준)**
+- 등록 주체는 `rewrite`(팀원3)이며 템플릿 저장 API는 관여하지 않는다. 템플릿 원문(`template.body`)의 `<a href>` 중 추적 대상만 등장 순서대로 등록한다(`link_order`).
+- `href`에 치환자(`{{...}}`)가 있는 링크는 고객마다 주소가 달라 등록·추적하지 않는다(행 증가·개인정보 방지, `{{couponUrl}}`을 제외하는 PRD 8.1과 같은 이유).
+- 템플릿은 일회성이면 `campaign.template_id`, 워크플로우면 `workflow_step.config_json.templateId`(5.2)로 찾는다. 템플릿이 없는 발송(TEST 등)은 링크를 바꾸지 않고 오픈 픽셀만 넣는다.

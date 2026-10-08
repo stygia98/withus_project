@@ -1,0 +1,26 @@
+# EC2 백엔드 systemd 유닛. 설치: sudo cp withus-backend.service /etc/systemd/system/ && sudo systemctl daemon-reload
+# && sudo systemctl enable --now withus-backend
+# 배포 위치: /opt/withus/withus-backend.jar (deploy-backend.sh 가 올린다), 환경변수: /etc/withus/withus-backend.env
+[Unit]
+Description=Withus backend (Spring Boot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=withus
+Group=withus
+WorkingDirectory=/opt/withus
+EnvironmentFile=/etc/withus/withus-backend.env
+# JVM 타임존을 서울로 고정한다 (CLAUDE.md 4장). 단일 소형 인스턴스라 힙은 작게 둔다 — 인스턴스 크기에 맞춰 조정
+ExecStart=/usr/bin/java -Duser.timezone=Asia/Seoul -Xms256m -Xmx768m -jar /opt/withus/withus-backend.jar
+# SIGTERM 으로 정상 종료한다. 디스패처는 종료 신호를 받으면 현재 건만 마치고 남은 선점분을 PENDING 으로 되돌린다(backend #92).
+# Spring 종료 단계 제한이 30초라, systemd 가 그 전에 SIGKILL 하지 않도록 넉넉히 둔다
+KillSignal=SIGTERM
+TimeoutStopSec=60
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

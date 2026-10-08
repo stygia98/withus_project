@@ -3,6 +3,8 @@
 > 기준 문서: `docs/prd.md` (PRD v2.3) · 기간 5주(W1~W5) · 인원 4명(PL + 팀원 3명)
 >
 > 주차(W1~W5)는 **예상 일정**이다. 실제 시작일·소요 시간은 기록하지 않는다. 체크박스는 PL이 PR 병합 시 갱신한다.
+>
+> **2026-10-08 체제 변경:** 팀원 3명이 빠지고 PL 혼자 남은 작업을 맡는다. 이날 AWS 배포 직전까지 로컬에서 할 수 있는 일을 마쳤고(`docs/roles/pl-verification.md` 6장), 남은 일은 모두 W5 의 AWS 작업이다. 아래 팀원 항목의 남은 일도 PL 이 한다.
 
 일회성 발송을 W2에 먼저 끝까지 연결한 뒤, W3에 워크플로우·수신거부·쿠폰으로 확장하고, W4에 AI와 통합 테스트를 마쳐 기능을 동결한다. W5는 운영 배포와 시연 검증만 한다.
 
@@ -42,45 +44,46 @@
 - [x] 로그인/로그아웃/토큰 재발급(httpOnly 쿠키), CSRF(`GET /api/v1/auth/csrf`), 로그인 5회 실패 잠금
 - [x] 최초 OWNER 계정 생성, 스케줄러 스레드 풀 설정
 - [x] Next.js 골격: rewrites(`/api/*`), 공통 fetch 래퍼, `lib/query-keys.ts`, 로그인 화면
-- [ ] 레이아웃·GNB·인증 가드 (목업 PNG 수령 후)
-- [ ] 사용자 관리 API(`/api/v1/members`)
+- [x] 레이아웃·GNB·인증 가드 (목업: `docs/design/mockups/`) (frontend #8 — 디자인 토큰, 30분 후 로그아웃 버그 수정 포함)
+- [x] 사용자 관리 API(`/api/v1/members`)·화면(`/settings/users`) (backend #26, frontend #9)
 
 **팀원1**
-- [ ] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트
-- [ ] 수신동의 변경과 `consent_history` 기록
-- [ ] **(W1 최우선)** `SegmentService`·`ConsentService` 임시 구현(stub) 먼저 병합 — 팀원2가 기다리지 않게
+- [x] 고객 CRUD API·화면, 입력값 정규화 유틸(이메일·휴대폰·지역·날짜) + 단위 테스트 (backend #2, frontend #1 — 레이아웃은 PL 작업 후 자동 적용)
+- [x] 수신동의 변경과 `consent_history` 기록 (backend #2)
+- [x] **(W1 최우선)** `SegmentService`·`ConsentService` 임시 구현(stub) 먼저 병합 — 팀원2가 기다리지 않게 → stub 대신 실제 구현으로 대체: `ConsentService`(backend #5), `SegmentService` 1차(backend #3)
 
 **팀원2**
-- [ ] 템플릿 CRUD API·화면(최소 기능), TinyMCE 연동, `FileStorage`(로컬) 이미지 업로드
-- [ ] `MessageSender` 인터페이스 + SMTP(Mailpit) 구현, SMS Mock
-- [ ] **발송 큐 설계 Plan 작성 → PL 리뷰** (W2 착수 전 승인)
+- [x] 템플릿 CRUD API·화면(최소 기능), TinyMCE 연동, `FileStorage`(로컬) 이미지 업로드 — API·이미지 업로드(backend #7), 화면·TinyMCE(frontend #11), 렌더링 미리보기 API(backend #47), 광고 문구 직접 입력 금지 검증(backend #57). 후속(frontend #11 🔵7~10, `copy-tinymce` 정리)은 W5 배포 전
+- [x] `MessageSender` 인터페이스 + SMTP(Mailpit) 구현, SMS Mock (backend #7)
+- [x] **발송 큐 설계 Plan 작성 → PL 리뷰** (W2 착수 전 승인) — 승인 완료(backend #4, 승인 결과 #6)
 
 **팀원3**
-- [ ] 추적 API(`/t/o/{trackingToken}.gif`, `/t/c/{trackingToken}/{linkId}`), 비동기 이벤트 저장
-- [ ] Gemini 클라이언트(개인정보 미전송, 한도 초과 처리), 무료 등급 모델명·한도 확인
-- [ ] **(W1 최우선)** `TrackingLinkService`·`CouponService`·`TrackEventRepository`·`PlaceholderRenderer` stub 먼저 병합
+- [x] 추적 API(`/t/o/{trackingToken}.gif`, `/t/c/{trackingToken}/{linkId}`), 비동기 이벤트 저장 (backend #12)
+- [x] Gemini 클라이언트(개인정보 미전송, 한도 초과 처리), 무료 등급 모델명·한도 확인 (backend #12, 메인 #3)
+- [x] **(W1 최우선)** `TrackingLinkService`·`CouponService`·`TrackEventRepository`·`PlaceholderRenderer` stub 먼저 병합 (backend #10)
 
 ### W2 — 일회성 발송 끝까지 연결
 
 **목표:** M2. 가장 단순한 경로로 발송·추적 전체 흐름을 검증한다.
 
 **PL**
-- [ ] 일회성 발송 E2E 통합 테스트
+- [x] 일회성 발송 E2E 통합 테스트 — PL 이 2026-10-07 스케줄러를 켠 실제 앱(스크래치 DB·Mailpit)에서 API 로 전체 흐름을 점검해 통과: CSV 업로드(성공 36·실패 4)·입력값 정규화 → 구매 등록·세그먼트 미리보기 → 21시 예약 차단(다음 가능 시각 안내) → 예약 → 자동 시작·발송·완료 → 메일 내용((광고)·발신자·수신거부·오픈 픽셀·추적 링크, 쿠폰·수신거부 링크는 치환 안 됨) → 오픈·클릭·봇 판정(변조·없는 토큰은 저장 안 됨)·대시보드(봇 제외) → 쿠폰 GET 불변·POST 1회 → 수신거부 GET 불변·POST 처리(멱등)·재발송 제외. 프론트 공개 페이지 렌더링, 재시작 복구, 운영 SES 는 이 점검 범위 밖
 
 **팀원1**
-- [ ] CSV/xlsx 업로드(10,000행, 500행 배치 insert, 행별 결과, `suppression` 반영)
-- [ ] 세그먼트 조건 빌더: 규칙 JSON → MyBatis 동적 SQL(화이트리스트), 대상 수 미리보기 + 단위 테스트
+- [x] CSV/xlsx 업로드(10,000행, 500행 배치 insert, 행별 결과, `suppression` 반영) (backend #9, frontend #2 — 1만 행 2.3초)
+- [x] 세그먼트 조건 빌더: 규칙 JSON → MyBatis 동적 SQL(화이트리스트), 대상 수 미리보기 + 단위 테스트 (backend #3·#8, frontend #2 — 10만 명 미리보기 최대 37ms)
 
 **팀원2**
-- [ ] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함)
-- [ ] **공통 발송 큐**: PENDING 적재 → `SENDING` 선점 → 트랜잭션 밖 발송 → SENT/FAILED, 우선순위, 토큰 버킷 속도 제한
-- [ ] 발송 직전 재확인, 재시도(1·5·15분), `SENDING` 10분 초과 처리
-- [ ] 발송 시 렌더링: (광고)·발신자·수신거부 삽입, `PlaceholderRenderer`·`TrackingLinkService.rewrite` 연결
+- [x] 일회성 캠페인 생성·예약, 20:50 컷오프 검사(PENDING 대기분 포함) (backend #31, 시작 경합 #54·재시작 경로 #55 보강, 화면 frontend #15). 후속: 10만 건 시작이 요청 안에서 동기 적재라 DB 왕복이 느린 환경에서 61~64초(이슈 #73, W5 리허설 전 확인)
+- [x] 템플릿 테스트 발송 API(F-04, `kind = TEST`, 통계 제외) (backend #69 — 실제 서버로 EMAIL·SMS 발송 후 대시보드 통계 불변 확인, PRD 10.3 "테스트 발송은 대시보드 통계에 잡히지 않는다")
+- [x] **공통 발송 큐**: PENDING 적재 → `SENDING` 선점 → 트랜잭션 밖 발송 → SENT/FAILED, 우선순위, 토큰 버킷 속도 제한 (backend #21 — 우선순위는 kind 로 결정, 반송 BOUNCED 는 backend #32·#33, 적재 일괄 동의 판정 `filterSendable` 은 backend #42. SMS 수신처 NPE·테스트 4건은 이슈 #43)
+- [x] 발송 직전 재확인, 재시도(1·5·15분), `SENDING` 10분 초과 처리 (backend #21 — 결과 기록 UPDATE 상태 가드, 발송 성공 후 재시도 금지, 건별 실패 격리)
+- [x] 발송 시 렌더링: (광고)·발신자·수신거부 삽입, `PlaceholderRenderer`·`TrackingLinkService.rewrite` 연결 (backend #21 — 캠페인 발송 기준. TEST·NOTICE 렌더링은 `send_log.template_id` 추가 후 F-04·F-12 작업에서(#21 PL 결정 B), `{{region}}` 표시명은 backend #41 `Region.displayName()` 적용 대기)
 
 **팀원3**
-- [ ] 치환자 렌더러 `PlaceholderRenderer`(`{{name|고객}}` 기본값, 시스템 기본값, 미리보기용 기본값 적용 수) + 단위 테스트 — 팀원2에서 이관
-- [ ] 봇 판정(10초, User-Agent 키워드, 1초 내 전체 클릭)
-- [ ] 메인 대시보드(카드, 활성 캠페인, 10초 폴링 이벤트 로그), 캠페인 성과 차트
+- [x] 치환자 렌더러 `PlaceholderRenderer`(`{{name|고객}}` 기본값, 시스템 기본값, 미리보기용 기본값 적용 수) + 단위 테스트 — 팀원2에서 이관 (backend #12, HTML 본문용 `renderHtml` 포함)
+- [x] 봇 판정(10초, User-Agent 키워드, 1초 내 전체 클릭) (backend #12)
+- [x] 메인 대시보드(카드, 활성 캠페인, 10초 폴링 이벤트 로그), 캠페인 성과 차트 (backend #12, frontend #3 — 활성 캠페인 카드는 팀원2 `GET /campaigns` 대기, 기간 필터·쿠폰 발급 현황 backend #30·frontend #10)
 
 ### W3 — 워크플로우·수신거부·쿠폰
 
@@ -88,43 +91,48 @@
 
 **PL**
 - [ ] SES 이메일 주소 인증(발신 1개 + 시연 수신 주소), 샌드박스 유지 — 도메인 없음(PRD 10.4)
-- [ ] W3 통합 테스트(워크플로우 + 수신거부 + 쿠폰)
+- [x] W3 통합 테스트(워크플로우 + 수신거부 + 쿠폰) — PL 이 2026-10-07 스케줄러를 켠 실제 앱에서 점검해 통과(`docs/roles/pl-verification.md`): 구조 검증 위반 5종 거부, 6.4 워크플로우를 가입 트리거 5명으로 실행해 VIP·일반 쿠폰·SMS 분기와 봇 클릭 제외, 대기 중 수신거부 시 쿠폰 메일 SKIPPED·쿠폰 미발급, WAIT = `sent_at` + 정확히 60.0초, 고객 삭제 시 인스턴스 CANCELLED, 일시정지 후 복제
 
 **팀원1**
-- [ ] 수신거부 페이지(GET 확인 / POST 처리), 원클릭 수신거부 API, `suppression` 관리·해제 절차
-- [ ] SES 반송·스팸신고 웹훅(SNS 서명 검증, Mock 요청으로 검증)
-- [ ] 휴면 판정 배치(180일 클릭·구매 없음), 구매 등록(`purchase`, 쿠폰 사용 연계)
+- [x] 수신거부 페이지(GET 확인 / POST 처리), 원클릭 수신거부 API, `suppression` 관리·해제 절차 (backend #22, frontend #7, 메인 #8 — 토큰은 PL 공용 `UnsubscribeTokens`)
+- [x] SES 반송·스팸신고 웹훅(SNS 서명 검증, Mock 요청으로 검증) (backend #24, 메인 #9 — 실제 SNS 서명은 W5 배포 후 확인, `send_log` BOUNCED 반영은 backend #33(팀원2 #32 인터페이스), 스팸신고는 send_log 를 SENT 로 유지)
+- [x] 휴면 판정 배치(180일 클릭·구매 없음), 구매 등록(`purchase`, 쿠폰 사용 연계) (휴면 배치 backend #15, 구매 등록 backend #14·메인 #4)
 
 **팀원2**
-- [ ] 워크플로우 빌더(폼 기반) + 구조 검증(분기 2단계, 노드 15개, 순환 금지, SEND 노드별 쿠폰)
-- [ ] 워크플로우 엔진: 500건 반복 처리, WAIT(`sent_at` 기준), CONDITION(봇 제외), 멈춤 복구, 멱등성
-- [ ] 캠페인 상태 전이(DRAFT/SCHEDULED/ACTIVE/PAUSED/COMPLETED), 일시정지 시 PENDING 보류
+- [x] 워크플로우 엔진 설계 Plan → PL 승인 (backend #20, 승인 결과는 `docs/plans/workflow-plan.md` 11장)
+- [x] 워크플로우 빌더(폼 기반) + 구조 검증(분기 2단계, 노드 15개, 순환 금지, SEND 노드별 쿠폰) (구조 검증 API backend #34·#56, 빌더 화면 frontend #15). 후속: 화면에서 생성 → 저장 → 시작 → 인스턴스 현황 흐름 확인(작성자), `InstancesPanel` 시각 표시 1곳 서울 고정
+- [x] 워크플로우 엔진: 500건 반복 처리, WAIT(`sent_at` 기준), CONDITION(봇 제외), 멈춤 복구, 멱등성 (backend #35 — PL 환경 전체 테스트 628건 통과). 후속: 단계 캐시(backend #72), CONDITION 대량 판정 dev 재검증(이슈 #51, 메인 #28)
+- [x] 캠페인 상태 전이(DRAFT/SCHEDULED/ACTIVE/PAUSED/COMPLETED), 일시정지 시 PENDING 보류 (backend #31·#35, 화면 frontend #15)
+- [x] 캠페인 복제 API(PRD 6.7 "일시정지 후 복제") — 구현 backend #35, 통합 테스트 7건 backend #75(복제 연결을 원본 ID로 두는 결함을 넣으면 실패함을 PL 이 확인), API 규칙·오류 코드 메인 #31, 이슈 #62 종료
 
 **팀원3**
-- [ ] 쿠폰 CRUD(정액·정률·상한, 고정 기간), 발급(`CouponService.issue`), `{{couponUrl}}` 연동
-- [ ] 고객 쿠폰 페이지 `/c/[token]`(카드형, POST 사용 처리, 모바일 대응), 전환 집계
-- [ ] 봇 판정 User-Agent 목록을 실제 메일로 검증·보강
+- [x] 쿠폰 CRUD(정액·정률·상한, 고정 기간), 발급(`CouponService.issue`), `{{couponUrl}}` 연동 (backend #16, frontend #4 — 발급 멱등·원자적 사용 처리)
+- [x] 고객 쿠폰 페이지 `/c/[token]`(카드형, POST 사용 처리, 모바일 대응), 전환 집계 (backend #16, frontend #4)
+- [ ] 봇 판정 User-Agent 목록을 실제 메일로 검증·보강 — 공식 문서 사전 조사와 정상 UA 회귀 테스트 완료(메인 #10, backend #30), 판정 규칙을 부분 일치 + 사람 기기 예외 목록(`bot-user-agent-allow-list`)으로 정리(backend #38, 메인 #13), 실제 메일(Gmail·Outlook·Naver) 확인은 W5로 미룸(`docs/roles/member3-verification.md` 4장)
 
 ### W4 — AI·통합·기능 동결
 
 **목표:** M4. 남은 기능을 마치고 10.3 완료 기준을 로컬에서 모두 통과시킨다.
 
 **PL**
-- [ ] PRD 10.3 완료 기준 전체 점검, 통합 테스트, 코드 리뷰
-- [ ] 운영 배포 스크립트 준비(`infra/aws/`), 배포 리허설(Amplify → EC2 프록시 확인)
+- [ ] PRD 10.3 완료 기준 전체 점검, 통합 테스트, 코드 리뷰 — 로컬 점검 완료(2026-10-07, `docs/roles/pl-verification.md`): 40개 중 충족 37(일부는 W5·직접 재현 불가 포함), ❌ 0(항목 24 F-12 는 backend #87 머지로 해소), ⏳ 2(항목 10 배포 보류, 항목 30 1만 명 적재 시간은 RDS 재측정), ➖ 1(A/B). W5 운영 재검증이 끝나면 완료
+- [ ] 운영 배포 스크립트 준비(`infra/aws/`), 배포 리허설(Amplify → EC2 프록시 확인) — 스크립트·절차서·환경변수 템플릿·IAM/S3 정책과 backend `application-prod.yml`(빈 로컬 DB 로 prod 기동 확인)은 2026-10-08 완료. 리허설은 AWS 가 필요해 W5
 
 **팀원1**
-- [ ] 수신동의 2년 확인 안내(F-12, NOTICE 발송·시간 제한)
-- [ ] 버그 수정
+- [x] 수신동의 2년 확인 안내(F-12, NOTICE 발송·시간 제한) — 대상 선정·NOTICE 적재·시간 제한(backend #40·#49, 쿨다운 30일 PL 확정), 본문용 동의 일시 조회 `ConsentService.findConsentAt`(backend #84), NOTICE 본문 렌더링(backend #87, 코드 고정 문구+치환). PL 이 2026-10-07 local 에서 시드 99번으로 실제 앱·Mailpit 수신까지 확인. `consent-notice.enabled` 기본값은 `false` 그대로이고 운영 설정은 W5(`WITHUS_SCHEDULER_CONSENT_NOTICE_ENABLED`). 운영 시연은 제외(PL 결정, backend #81)
+- [x] 버그 수정 — W4 까지 접수된 결함 없음. 이후 발견분은 W5 "발견된 버그 수정"에서 PL 이 처리
 
 **팀원2**
-- [ ] 워크플로우 안정화(10만 건 적재 부하 확인, 우선순위 검증)
-- [ ] (선택) A/B 테스트, React Flow 캔버스
+- [x] 워크플로우 안정화(10만 건 적재 부하 확인, 우선순위 검증) — 부하 1/3·2/3 완료(backend #70·#71): 10만 건 대기 중에도 priority 2 가 먼저 나가고(PL 환경 앞질러 나간 priority 3 이 17건 이하) 복구·자동 완료가 멈추지 않음. CONDITION 단계 캐시로 5,000건 판정 DB 왕복 감소(backend #72). 적재 시간(이슈 #73)은 DB 왕복이 아니라 커밋의 WAL fsync 가 좌우함을 PL 환경에서 확인(총 73.7초 중 fsync 53.2초, 디스크 동기 쓰기 150~330ms) — 운영(RDS) 재현 여부는 W5 에서 `EnqueuePhaseCheck`(backend #77)로 확인. 부하 3/3(선점용 부분 인덱스)은 **추가하지 않기로 결정**(2026-10-08, 선점이 병목이 아니고 인덱스가 적재 fsync 를 키움). 같은 날 Docker 없는 PostgreSQL 에서 1만 명 한 주기 적재 13.1초. 정상 종료 시 선점분 누락(backend #92)도 수정·테스트 완료. RDS 측정은 W5 운영 재검증 항목으로 이관
+- [ ] ~~(선택) React Flow 캔버스~~ — 범위 제외(2026-10-08, 1인 작업 전환. 리스크표 "막히면 React Flow 는 포기"). A/B 테스트도 범위 제외(PL 결정 2026-10-06, 메인 #12)
+- [x] `SesMessageSender`(AWS SDK v2 `sesv2`, 원시 MIME·List-Unsubscribe, `withus.mail.type=ses`) — 구현 backend #85. PL 리뷰에서 SDK 자체 재시도가 같은 메일을 4번 보내는 중복 발송 경로를 실측으로 찾아 `doNotRetry()` 와 회귀 테스트(`SesMessageSenderRetryTest`)로 고쳤다. PL 승인은 **코드·의존성만**(backend 이슈 #78), 실제 SES 호출 검증과 SES 주소 인증·운영 설정은 W5
+- [x] `S3FileStorage`(AWS SDK v2 `s3`, 에디터 이미지 공개 읽기 URL 그대로 반환, `withus.storage.type=s3`) — 구현 backend #86(`images/<UUID>.<확장자>` 키, 로컬 동작 불변). 이미지 업로드만, CSV 저장은 별도. **"이미지 경로만 공개 읽기"(PRD 8.5)는 버킷 정책으로 지키므로 W5 에 `images/*` 에만 `s3:GetObject` 를 허용**하고, 실제 S3 업로드·공개 URL 접근 검증도 W5
+- 팀원2 구현 항목(SES #85, S3 #86, F-12 NOTICE 렌더링 #87)은 2026-10-07 모두 머지 완료. 2026-10-08 안정화 로컬 부분 완료, 남은 RDS 측정은 W5
 
 **팀원3**
-- [ ] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장)
-- [ ] 성과 리포트 마무리(단계별 차트, 전환율, A/B 비교)
-- [ ] 여유 시 팀원2 워크플로우 안정화 지원(부하 데이터 생성, CONDITION 조회 검증)
+- [x] AI-01 문구 초안 3안, AI-02 발송 시간 추천(08:00~20:00 가드레일은 코드로), AI-03 성과 요약(`ai_report` 저장) (backend #16, frontend #4 — W4 항목 선행 완료)
+- [x] 성과 리포트 마무리(단계별 차트, 전환율, 기간 필터, 성과 리포트 목록 `/analytics`) — 단계별·전환율 완료(backend #16, frontend #4), 기간 필터 완료(backend #30·#38, frontend #10·#13, 메인 #10·#13 — 366일 상한·서울 날짜 기준), 목록 `/analytics`는 frontend #16. A/B 비교는 A/B 기능 제외로 뺌(PL 결정 2026-10-06, 메인 #12)
+- [x] 여유 시 팀원2 워크플로우 안정화 지원(부하 데이터 생성, CONDITION 조회 검증) (backend #30, 메인 #10 — send_log 10만 건 기준 1건 판정 0.066ms, 인덱스 추가 불필요)
 
 ### W5 — 운영 배포와 시연
 
@@ -136,8 +144,8 @@
 - [ ] 발신자 명칭·연락처·080 번호를 실제 값으로 교체
 
 **팀원1·2·3**
-- [ ] 각자 구간의 10.3 완료 기준을 운영 환경에서 재검증
-- [ ] 시연 데이터 준비, 발견된 버그 수정
+- [ ] 각자 구간의 10.3 완료 기준을 운영 환경에서 재검증 — 단, **F-12 수신동의 확인 안내 발송은 운영 시연에서 제외**(PL 결정 2026-10-07, backend #81): 운영에서 동의 일시를 2년 전으로 만들 방법이 없고 운영 DB 직접 수정은 금지라, local(시드 99번, Mailpit) 확인으로 10.3 기준을 충족한다
+- [ ] 시연 데이터 준비(local 시드에 발송·이벤트 예시 추가는 완료 — `db/seed/local/R__seed_local_demo.sql`, backend #65·메인 #25, 메인 #12 결정), 발견된 버그 수정
 
 ## 4. 주요 의존 관계
 

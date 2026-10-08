@@ -440,6 +440,7 @@ CREATE UNIQUE INDEX uq_send_log_one_time
 - SNS 메시지 서명을 검증하고, 등록한 토픽 ARN에서 온 요청만 처리한다. 검증 실패 요청은 무시하고 로그만 남긴다.
 - SNS 구독 확인(SubscriptionConfirmation) 요청을 처리한다.
 - 반송(Permanent)·스팸신고는 `suppression`에 추가하고 수신동의를 N으로 바꾼다.
+- 반송(Permanent)은 원 발송 건의 `send_log`를 BOUNCED로 바꾼다. 스팸신고 시 `send_log` 상태는 바꾸지 않는다(suppression·수신동의 N만). 이미 집계된 오픈·클릭·전환이 사후에 지표에서 빠지지 않게 하기 위해서다.
 - SNS는 공개 URL이 필요해 로컬(W1~W4)에서는 받을 수 없다. 로컬은 SNS 형식의 Mock 요청으로 처리 로직을 검증하고, 실제 연동은 W5 배포 후 확인한다.
 
 **대량 발송 처리.** 10만 건을 한 번에 보내면 서버 메모리와 SES 한도를 모두 넘으므로, 발송은 적재 → 순차 소비 구조로 만든다. 일회성·A/B·워크플로우의 모든 메일/SMS 발송이 같은 큐와 같은 속도 제한을 거친다.
@@ -556,7 +557,7 @@ CREATE UNIQUE INDEX uq_send_log_one_time
 
 구간 간 연결 지점 (W1에 인터페이스 먼저 합의):
 
-- 발송(팀원2) → 고객(팀원1): `SegmentService.findTargetCustomers(segmentId)`, 수신동의 확인
+- 발송(팀원2) → 고객(팀원1): `SegmentService.findTargetCustomers(segmentId)`, 수신동의 확인(`ConsentService.isSendable(customerId, channel)`, 적재용 일괄 판정 `ConsentService.filterSendable(customerIds, channel)` — 같은 규칙, 쿼리 1회), F-12 안내 본문용 채널 동의 일시 `ConsentService.findConsentAt(customerId, channel)`(삭제·동의 N 이면 없음, backend #81)
 - 발송(팀원2) → 전환(팀원3): `TrackingLinkService.rewrite(html, sendLogId)`, `CouponService.issue(couponId, customerId, sendLogId)`
 - 워크플로우 CONDITION(팀원2) → 전환(팀원3): `TrackEventRepository` 조회
 - 대시보드·리포트(팀원3) → 발송(팀원2): `send_log` 집계

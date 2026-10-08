@@ -9,7 +9,7 @@
 ```
 [브라우저]    ─┐
 [메일 수신자] ─┼─https──▶ [AWS Amplify: Next.js 15 SSR]  <앱>.amplifyapp.com (기본 주소, 도메인 구매 없음)
-[SNS 웹훅]   ─┘                │  rewrites /api/*, /t/* (쿠키 퍼스트파티, CORS 불필요)
+[SNS 웹훅]   ─┘                │  rewrites /api/*, /t/*, /files/* (쿠키 퍼스트파티, CORS 불필요)
                                ▼  http
                      [EC2: Spring Boot 4 (단일 인스턴스), 도메인·인증서 없음]
                       ├─ PostgreSQL 17 (RDS, 자동 백업 7일)
@@ -63,11 +63,11 @@
 src/main/resources/
 ├─ application.yml             공통
 ├─ application-local.yml       로컬 (docker compose, Mailpit, 로컬 디스크, SMS Mock)
-├─ application-prod.yml        운영 (RDS, SES, S3) — 비밀값은 환경변수 (W5 작성)
+├─ application-prod.yml        운영 (RDS, SES, S3) — 비밀값은 환경변수 (작성 완료, 환경변수 목록은 infra/aws/env.prod.example)
 ├─ mapper/{domain}/*.xml
-└─ db/migration/
-   ├─ V1__init.sql
-   └─ local/R__seed_local.sql   (local 프로필에서만 locations에 포함, 반복 실행 마이그레이션)
+├─ db/migration/               운영·로컬 공통. Flyway 가 하위 폴더까지 재귀로 스캔하므로 시드를 두지 않는다 (이슈 #46)
+│  └─ V1__init.sql
+└─ db/seed/local/R__seed_local.sql   (local 프로필에서만 locations에 포함, 반복 실행 마이그레이션)
 ```
 
 아래는 요약이다. **실제 기준은 `withus_backend/src/main/resources/application.yml`** 이다.
@@ -99,7 +99,8 @@ withus:
   tracking:
     base-url: ${WITHUS_PUBLIC_BASE_URL:http://localhost:8080}   # 운영: Amplify 주소 (메일 링크 기준)
     bot-click-seconds: 10
-    bot-user-agent-keywords: bot,crawler,spider,scanner,preview
+    bot-user-agent-keywords: bot,crawler,spider,scanner,preview   # 대소문자 무시, 부분 일치
+    bot-user-agent-allow-list: cubot   # 키워드를 포함하는 사람 기기명, 판정 전에 UA 에서 지운다
   send-window:
     start: "08:00"
     end: "20:50"
@@ -126,7 +127,7 @@ spring:
     host: localhost
     port: 1025
   flyway:
-    locations: classpath:db/migration,classpath:db/migration/local
+    locations: classpath:db/migration,classpath:db/seed/local
 withus:
   storage:
     type: local
@@ -137,7 +138,7 @@ withus:
     secure: false        # 로컬 http
 ```
 
-**운영 환경변수(커밋 금지)**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `HMAC_SECRET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`(가능하면 EC2 IAM 역할로 대체), `S3_BUCKET`, `SES_SNS_TOPIC_ARN`, `GEMINI_API_KEY`, `WITHUS_PUBLIC_BASE_URL`(Amplify 주소), `WITHUS_MAIL_FROM`(SES 인증 이메일), `OWNER_EMAIL`, `OWNER_PASSWORD`.
+**운영 환경변수(커밋 금지)**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `HMAC_SECRET`, `TRACKING_IP_SALT`(추적 이벤트 IP 해시 솔트), `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`(가능하면 EC2 IAM 역할로 대체), `S3_BUCKET`, `SES_TOPIC_ARN`(SES 반송·스팸신고 SNS 토픽, 비우면 웹훅이 모든 요청을 무시), `GEMINI_API_KEY`, `WITHUS_PUBLIC_BASE_URL`(Amplify 주소), `WITHUS_MAIL_FROM`(SES 인증 이메일), `OWNER_EMAIL`, `OWNER_PASSWORD`.
 
 ## 3. 프론트엔드
 
@@ -188,19 +189,19 @@ withus_frontend/
 ├─ components/{domain}/
 ├─ lib/api-client.ts              fetch 래퍼 (credentials, X-XSRF-TOKEN, 401 재시도)
 ├─ lib/query-keys.ts
-└─ next.config.ts                 rewrites: /api/:path* → ${BACKEND_URL}/api/:path*
+└─ next.config.ts                 rewrites: /api/*, /t/*, /files/* → ${BACKEND_URL}/...
 ```
 
-**환경변수**: `BACKEND_URL`(서버 전용, 로컬 `http://localhost:8080`). 브라우저 코드에서는 백엔드 주소를 쓰지 않으므로 `NEXT_PUBLIC_` 변수가 필요 없다.
+**환경변수**: `BACKEND_URL`(서버 전용, 로컬 `http://localhost:8080`). 브라우저 코드에서는 백엔드 주소를 쓰지 않으므로 `NEXT_PUBLIC_` 변수가 필요 없다. rewrites 는 `next build` 때 정해지므로 Amplify 에서는 빌드 환경변수로 넣고, 바꾸면 다시 빌드한다. `/files/*` 는 local 이미지(`LocalFileStorage`)용이며, 운영(S3)에서는 이미지가 S3 공개 URL 로 바로 나간다.
 
 ## 4. 인프라·도구
 
 | 항목 | 선택 | 비고 |
 |---|---|---|
-| 로컬 DB | Docker `postgres:17` | 5432, DB/계정 `withus` |
-| 로컬 메일 | Docker `axllent/mailpit` | SMTP 1025, 웹 UI 8025 |
-| 운영 백엔드 | EC2 1대 (Amazon Linux 또는 Ubuntu), Java 21, systemd 서비스 | |
-| 리버스 프록시·HTTPS | 없음. Amplify 기본 주소(HTTPS) + Next.js rewrites(`/api/*`, `/t/*`) | 도메인 구매 없음(PRD 10.4). EC2 보안 그룹은 백엔드 포트만 연다 |
+| 로컬 DB | Docker `postgres:17` | 5432, DB/계정 `withus`. Docker 없이 PC 에 설치한 PostgreSQL 17 도 된다(`infra/.env` 의 계정만 맞춘다) |
+| 로컬 메일 | Docker `axllent/mailpit` | SMTP 1025, 웹 UI 8025. Docker 없이 `winget install axllent.mailpit` 도 된다. **백엔드 테스트(`SendDispatcher*`)도 Mailpit 이 떠 있어야 통과한다** |
+| 운영 백엔드 | EC2 1대 (Amazon Linux 또는 Ubuntu), Java 21, systemd 서비스 | 배포 절차·스크립트는 `infra/aws/README.md` |
+| 리버스 프록시·HTTPS | 없음. Amplify 기본 주소(HTTPS) + Next.js rewrites(`/api/*`, `/t/*`, `/files/*`) | 도메인 구매 없음(PRD 10.4). EC2 보안 그룹은 백엔드 포트만 연다 |
 | 운영 DB | RDS PostgreSQL 17, 자동 백업 7일 | EC2 보안 그룹에서만 접근 |
 | 파일 | S3 (이미지 경로만 공개 읽기) | |
 | 메일 | SES 이메일 주소 인증 + 샌드박스(인증된 수신 주소, 초당 1건) + SNS 토픽 | 도메인 인증이 없어 스팸함 분류 가능. 대안: Mailpit 녹화 |
@@ -240,18 +241,21 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | springdoc-openapi | Spring Boot 4 호환 최신 | 3.1.1 |
 | jjwt | 0.12.x 이상 | 0.13.0 |
 | AWS SDK v2 BOM | 최신 안정판 | |
-| Apache POI | 5.x | |
+| Apache POI (`poi-ooxml`) | 5.x | 5.5.1 (BOM 관리 밖, pom 속성 고정 — 팀원1 업로드) |
+| Apache Commons CSV | 최신 안정판 | 1.14.1 (BOM 관리 밖, pom 속성 고정 — 팀원1 업로드) |
 | PostgreSQL (로컬·RDS) | 17 | 17 (docker `postgres:17`) |
 | Node.js | 22+ (권장 24 LTS) | 24 (`.nvmrc`) |
 | Next.js | 15.x | 15.5.26 |
 | React | 19.x | 19.1.0 |
 | Tailwind CSS | 4.x | 4.3.3 |
 | TanStack Query | 5.x | 5.104.0 |
-| TinyMCE | 최신 (자체 설치, GPLv2+) | 설치 시 기록 (팀원2), `license_key: 'gpl'` |
+| Recharts (shadcn Chart) | 3.x | 3.8.0 (팀원3 대시보드, `components/ui/chart.tsx`는 `dangerouslySetInnerHTML` 제거본) |
+| TinyMCE | `tinymce` 8.9.2 + `@tinymce/tinymce-react` 6.3.0 (자체 설치, GPLv2+) | `license_key: 'gpl'`. `scripts/copy-tinymce.mjs` 가 쓰는 파일(핵심·테마·아이콘·스킨·플러그인 link/lists/image/table)만 `public/tinymce` 로 복사 (팀원2, 2026-10-06) |
 | Lombok | Spring Boot BOM 관리 버전 | BOM 관리 (허용 어노테이션은 `lombok.config`로 강제) |
 | react-hook-form / zod / @hookform/resolvers | 최신 안정판 | 7.89.0 / 4.6.5 / 5.9.1 |
 | Prettier | 최신 안정판 | 3.9.9 (`.prettierrc`: printWidth 100, `*.md` 제외) |
 | shadcn/ui 기반 | CLI 기본값 | `@base-ui/react`(프리미티브), `cn`(shadcn 공식 클래스 병합 유틸) |
+| Gemini 모델 | 무료 등급의 가장 가벼운 텍스트 모델 | `gemini-3.1-flash-lite` (2026-10-01 실제 호출로 확인: `models/gemini-3.1-flash-lite:generateContent` HTTP 200, 응답 `modelVersion` 일치). 가격 문서상 무료 등급은 "Free of charge"이며 **무료 등급 입력은 Google 제품 개선에 쓰임**(그래서 개인정보 미전송). 인증은 `x-goog-api-key` 헤더. 일일 한도는 태평양 시간 자정에 초기화되고 프로젝트 단위로 적용(공식 rate-limits 문서). **무료 등급 한도(2026-10-01 AI Studio 비율 제한 화면에서 확인, 프로젝트 `withus-dev`): RPM 15, TPM 250K(분당 입력 토큰), RPD 500.** 공식 문서에 수치가 없어 대시보드 값을 기준으로 하며, Google은 한도가 보장되는 값이 아니라고 밝힘(실제 용량은 달라질 수 있음). 시연 전날 대시보드에서 다시 확인 |
 
 ## 6. 결정 사항
 
@@ -262,8 +266,8 @@ W1 첫날 저장소를 만들 때 실제 설치된 버전을 기록한다. 이�
 | 폼 라이브러리 | **react-hook-form + zod** (+ `@hookform/resolvers`) | 고객·쿠폰·캠페인 등 폼이 많음. `package.json` 추가 완료 |
 | TinyMCE 라이선스 | **TinyMCE 자체 설치, GPLv2+** (`license_key: 'gpl'`) | 저장소가 공개(GitHub public)라 GPL 소스 공개 의무 충족. Tiptap 대체 불필요 |
 | SES API | **`sesv2`** | List-Unsubscribe 헤더를 포함한 원시 메시지 전송 (W2, 팀원2) |
-| SNS 서명 검증 | **AWS SDK 제공 기능 우선**, 없으면 직접 구현 | W3, 팀원1 |
-| Gemini 모델 | **무료 등급의 가장 가벼운 텍스트 모델** | 정확한 모델명·한도는 팀원3이 W1에 확인해 5장에 기록 |
+| SNS 서명 검증 | **JDK(`java.security`·`HttpClient`)로 직접 구현** — AWS SDK 추가 없음 | W3, 팀원1 (backend #24, 검증 기준은 API_SPEC 9장) |
+| Gemini 모델 | **무료 등급의 가장 가벼운 텍스트 모델** | 모델명 `gemini-3.1-flash-lite`와 무료 등급 한도(RPM 15·TPM 250K·RPD 500) 확인, 5장에 기록 완료 (팀원3, 2026-10-01) |
 | 자동 포맷터 | **프론트 Prettier만** | `.prettierrc`(printWidth 100), `npm run format` / `format:check`, ESLint와 충돌 방지(`eslint-config-prettier`). 백엔드는 IntelliJ 기본 |
 | 로컬 DB 비밀번호 | **`infra/.env`에서 읽음** (파일에 직접 쓰지 않음) | CLAUDE.md 7장 "비밀값은 환경변수로만"과 일치. `.env.example` 복사 후 사용 |
 
