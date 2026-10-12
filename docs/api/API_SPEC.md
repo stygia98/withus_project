@@ -326,6 +326,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | POST | `/api/v1/campaigns/{campaignId}/resume` | O M | 재개 (PAUSED → ACTIVE) |
 | POST | `/api/v1/campaigns/{campaignId}/complete` | O M | 종료 (→ COMPLETED, 인스턴스 CANCELLED) |
 | POST | `/api/v1/campaigns/{campaignId}/duplicate` | O M | 복제 (새 DRAFT) |
+| DELETE | `/api/v1/campaigns/{campaignId}` | O M | 삭제 (DRAFT만, 발송 기록이 있으면 불가) |
 | PUT | `/api/v1/campaigns/{campaignId}/ab-test` | O M | A/B 설정 (일회성, DRAFT만) |
 | GET | `/api/v1/campaigns/{campaignId}/workflow` | O M S(R) | 워크플로우 노드 조회 |
 | PUT | `/api/v1/campaigns/{campaignId}/workflow` | O M | 워크플로우 저장 (DRAFT만, 저장 시 검증) |
@@ -370,6 +371,13 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 - 원본은 어떤 상태(`DRAFT`·`SCHEDULED`·`ACTIVE`·`PAUSED`·`COMPLETED`)여도 복제할 수 있고, 원본은 바뀌지 않는다. 멱등하지 않아 같은 요청을 두 번 보내면 두 개가 생긴다.
 - 쿠폰 기간이 지났거나 템플릿·세그먼트가 삭제된 원본도 복제는 되고, 시작할 때 기존 검사(`COUPON_OUT_OF_PERIOD` 등)가 막는다.
 - 권한은 O·M 이며 STAFF 는 403. 오류: `CAMPAIGN_NOT_FOUND`(404).
+
+**DELETE /campaigns/{id}**: 요청 본문 없음, 응답 `data` 는 `null`. **`DRAFT` 상태만 삭제**한다.
+
+- 발송 기록(`send_log`)은 통계와 법규상 기록이라 지우지 않는다. 그래서 `SCHEDULED` 는 먼저 `cancel-schedule` 로 `DRAFT` 로 되돌려야 하고, `ACTIVE`·`PAUSED`·`COMPLETED` 는 삭제할 수 없다.
+- 워크플로우 노드(`workflow_step`)와 A/B 설정은 함께 지워진다. 시작이 실패해 남은 아직 선점되지 않은 `PENDING` 적재분은 삭제 전에 먼저 치운다.
+- 처리된 발송 기록·워크플로우 인스턴스·AI 리포트가 이 캠페인을 참조하면 삭제할 수 없다(`CAMPAIGN_INVALID_STATUS`, 409). 시작 선점 중인 캠페인도 같다.
+- 권한은 O·M 이며 STAFF 는 403. 오류: `CAMPAIGN_INVALID_STATUS`(409), `CAMPAIGN_NOT_FOUND`(404).
 
 **PUT /campaigns/{id}/workflow**
 
