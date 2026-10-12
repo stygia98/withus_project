@@ -72,9 +72,11 @@
 | POST | `/api/v1/auth/refresh` | 공개(쿠키) | Access 재발급, Refresh 교체 |
 | POST | `/api/v1/auth/logout` | 로그인 | Refresh 무효화, 쿠키 만료 |
 | GET | `/api/v1/auth/me` | 로그인 | 내 정보 |
+| POST | `/api/v1/auth/password` | 로그인(모든 역할) | 내 비밀번호 변경 (현재 비밀번호 확인) |
 | GET | `/api/v1/members` | O | 사용자 목록 |
 | POST | `/api/v1/members` | O | 사용자 생성 |
 | PATCH | `/api/v1/members/{memberId}` | O | 역할·활성 여부 변경 |
+| POST | `/api/v1/members/{memberId}/password` | O | 사용자 비밀번호 재설정 |
 
 **POST /auth/login**
 
@@ -86,6 +88,18 @@
 ```
 
 오류: `AUTH_INVALID_CREDENTIALS`(401), `AUTH_ACCOUNT_LOCKED`(401, `error.details.lockedUntil` 포함, 5회 실패 시 5분), `AUTH_ACCOUNT_INACTIVE`(401).
+
+**POST /auth/password** (내 비밀번호 변경 — STAFF 를 포함한 모든 로그인 사용자)
+
+```json
+// 요청 — 새 비밀번호 8~72자
+{ "currentPassword": "********", "newPassword": "********" }
+// 응답 data: null (새 ACCESS_TOKEN·REFRESH_TOKEN 쿠키를 발급한다)
+```
+
+- 현재 비밀번호를 확인한 뒤에만 바꾼다. 틀리면 로그인과 같은 카운터로 실패가 쌓이고, 5회 연속 실패 시 5분 잠긴다.
+- 바꾸면 Refresh 토큰이 교체되어 **다른 기기의 로그인은 끊기고**, 요청한 이 세션만 새 쿠키로 이어진다.
+- 오류: `AUTH_CURRENT_PASSWORD_INVALID`(400), `AUTH_PASSWORD_CHANGE_LOCKED`(429, `error.details.lockedUntil` 포함). 401 이 아니므로 프론트가 세션 만료로 오해해 로그인 화면으로 보내지 않는다.
 
 **사용자 관리 (`/members`, OWNER 전용)**
 
@@ -101,6 +115,18 @@
 - 자기 계정의 역할·활성 여부는 바꿀 수 없다(`MEMBER_SELF_CHANGE`). 이 API 는 활성 OWNER 만 부르므로 마지막 OWNER 가 사라지는 경우도 생기지 않는다.
 - 역할·활성 여부를 바꾸면 그 사용자의 Refresh 토큰을 지운다. 이미 받은 Access 토큰은 만료(30분)까지 유효하므로 **늦어도 30분 안에** 새 역할·비활성이 반영된다.
 - 오류: `MEMBER_DUPLICATE_EMAIL`(409), `MEMBER_SELF_CHANGE`(400), 없는 사용자 `COMMON_NOT_FOUND`(404).
+
+**POST /members/{memberId}/password** (비밀번호 재설정, OWNER 전용)
+
+```json
+// 요청 — 새 비밀번호는 OWNER 가 정해 그 사용자에게 직접 전달한다(8~72자). 응답 data: null
+{ "newPassword": "********" }
+```
+
+- 기존 비밀번호는 BCrypt 해시로만 저장되어 조회·표시할 수 없다. 이 API 는 새 비밀번호로 덮어쓰기만 한다.
+- 그 사용자의 Refresh 토큰을 지워 기존 로그인을 끊고, 로그인 실패 횟수·잠금도 풀린다. 이미 받은 Access 토큰은 만료(30분)까지 유효하다.
+- 자기 계정은 재설정할 수 없다(`MEMBER_SELF_PASSWORD`, 400). 본인은 `POST /auth/password` 를 쓴다.
+- 오류: `MEMBER_SELF_PASSWORD`(400), 없는 사용자 `COMMON_NOT_FOUND`(404), 비밀번호 길이 위반 `COMMON_INVALID_INPUT`(400).
 
 ## 3. 고객 (팀원1 · `customer`)
 
@@ -655,6 +681,9 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | `AUTH_ACCOUNT_INACTIVE` | 401 | 비활성 계정 |
 | `MEMBER_DUPLICATE_EMAIL` | 409 | 이미 등록된 사용자 이메일 |
 | `MEMBER_SELF_CHANGE` | 400 | 자기 계정의 역할·활성 여부 변경 시도 |
+| `MEMBER_SELF_PASSWORD` | 400 | 자기 계정을 사용자 관리에서 비밀번호 재설정 시도 |
+| `AUTH_CURRENT_PASSWORD_INVALID` | 400 | 비밀번호 변경 시 현재 비밀번호 불일치 |
+| `AUTH_PASSWORD_CHANGE_LOCKED` | 429 | 현재 비밀번호 5회 실패로 변경 잠금 |
 | `AUTH_FORBIDDEN` | 403 | 권한 없음 |
 | `AUTH_CSRF_INVALID` | 403 | CSRF 토큰 없음·불일치 |
 | `CUSTOMER_DUPLICATE_EMAIL` | 409 | 삭제되지 않은 고객 중 같은 이메일 존재 |
