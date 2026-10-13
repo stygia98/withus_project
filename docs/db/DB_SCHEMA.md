@@ -513,6 +513,7 @@ PRD 7장에 없지만 구현에 필요해 추가했다. PRD 갱신 대상이다.
 | `consent_history` | `note` | 관리자가 수신거부를 해제할 때 증빙 메모 |
 | `campaign` | `created_by` | 작성자 추적 (다른 마스터 테이블과 일관성) |
 | `send_log` | `template_id` | 테스트 발송(V21). TEST 는 campaign_id·step_id 가 없어 렌더링할 템플릿을 알 수 없다. TEST 만 값이 있고 나머지는 NULL. 템플릿이 삭제되면 `ON DELETE SET NULL` |
+| `coupon_issue` | `code` | 매장 바코드용 12자리 숫자 쿠폰 번호(V31, project #51). `CHAR(12) NOT NULL UNIQUE`, 기본값 `coupon_issue_new_code()`(gen_random_uuid 의 60비트 → 10^12 나머지, 순번 아님). URL 토큰(`token`)과 따로 둔다 |
 | `campaign` | `start_claimed_at` | 시작 선점 표시(V20). 동시에 `start()` 를 부르는 요청 중 한 명만 적재·시작하게 한다. NULL 이면 아무도 시작 중이 아님, 10분 넘은 값은 낡은 선점으로 무시 |
 
 ## 9. 시드 데이터 (`R__seed_local.sql`, local 프로필 전용)
@@ -569,6 +570,7 @@ V1은 동결이므로 이후 변경은 담당 대역의 새 파일로만 한다.
 | 파일 | 담당 | 변경 | 이유 |
 |---|---|---|---|
 | `V30__track_link_unique_url.sql` | 팀원3 | `CREATE UNIQUE INDEX uq_track_link_template_url ON track_link (template_id, md5(original_url))` | 발송 시 `TrackingLinkService.rewrite`가 템플릿의 고정 링크를 자동 등록한다. 같은 템플릿의 같은 URL은 한 행만 두고, 동시 발송은 `INSERT ... ON CONFLICT (template_id, md5(original_url)) DO NOTHING`으로 처리한다. `original_url`은 길이 제한 없는 TEXT라 btree 키 한도를 피하려고 md5로 건다 |
+| `V31__coupon_issue_code.sql` | 팀원3 | 함수 `coupon_issue_new_code()` 추가, `coupon_issue.code CHAR(12)` 추가·기존 발급분 채움(겹치면 다시 뽑음), `DEFAULT coupon_issue_new_code()`, `NOT NULL`, `UNIQUE (uq_coupon_issue_code)` | 쿠폰을 오프라인 바코드 방식으로 바꿈(PRD F-10 ②, project #51). 바코드는 짧아야 스캐너가 잘 읽고 직원이 손으로도 칠 수 있어 URL 토큰과 따로 둔다. 새 발급은 `INSERT ... ON CONFLICT DO NOTHING` 후 번호가 겹쳐 0건이면 `CouponServiceImpl.issue`가 다시 시도한다(최대 3번) |
 
 **`track_link` 등록 규칙 (V30 기준)**
 - 등록 주체는 `rewrite`(팀원3)이며 템플릿 저장 API는 관여하지 않는다. 템플릿 원문(`template.body`)의 `<a href>` 중 추적 대상만 등장 순서대로 등록한다(`link_order`).
