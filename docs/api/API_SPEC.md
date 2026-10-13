@@ -433,6 +433,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | GET | `/api/v1/customers/{customerId}/coupon-issues?usable=true` | O M | 구매 등록 화면용 사용 가능 쿠폰 |
 | GET | `/api/v1/coupon-issues/by-code/{code}` | O M | 매장 바코드: 쿠폰 번호로 조회 (상태 변경 없음) |
 | POST | `/api/v1/coupon-issues/by-code/{code}/use` | O M | 매장 바코드: 사용 처리 (1회, 오늘이 유효기간 안) |
+| POST | `/api/v1/coupon-issues/by-code/{code}/cancel-use` | O M | 매장 바코드: 사용 취소 (잘못 찍은 사용 처리 되돌리기) |
 
 **POST /coupons**
 
@@ -502,6 +503,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 - `GET /api/v1/coupon-issues/by-code/{code}`: 상태를 바꾸지 않는 확인용 조회.
 - `POST /api/v1/coupon-issues/by-code/{code}/use`: 요청 본문 없음. 발급 1건당 1회, 오늘이 유효기간 안일 때만. 조건을 UPDATE 한 문장에 넣어 같은 번호를 두 번 찍어도 한 번만 성공한다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②).
 - `{code}`는 숫자 12자리. 직원이 손으로 친 공백·하이픈은 무시한다. 형식이 틀리거나 없는 번호는 `COUPON_NOT_FOUND`(404), 이미 사용 `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422). STAFF 는 403.
+- `POST /api/v1/coupon-issues/by-code/{code}/cancel-use`: 요청 본문 없음. `used_at`을 비워 다시 쓸 수 있게 하고 전환 집계(used_at 기준)에서도 빠진다. 조건을 UPDATE 한 문장에 넣는다. 응답은 위와 같은 쿠폰(취소 후 상태). 오류: 사용 전 `COUPON_NOT_USED`(409), 구매 등록으로 쓴 쿠폰(`purchase`에 연결) `COUPON_USED_BY_PURCHASE`(409, 금액·누적구매액이 함께 기록돼 여기서 되돌리지 않음), 없는 번호 `COUPON_NOT_FOUND`(404). STAFF 는 403.
 
 ```json
 { "code": "482913057361", "customerName": "김**", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USED", "usedAt": "2026-10-13T14:10:00+09:00" }
@@ -723,6 +725,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | `COUPON_INVALID_PERIOD` / `_RATE_CAP_REQUIRED` | 400 | 쿠폰 정의 오류 |
 | `COUPON_OUT_OF_PERIOD` | 422 | 유효기간 밖 |
 | `COUPON_NOT_USABLE` / `COUPON_ALREADY_USED` | 422 / 409 | 사용 불가 |
+| `COUPON_NOT_USED` / `COUPON_USED_BY_PURCHASE` | 409 / 409 | 매장 바코드 사용 취소 불가 |
 | `COUPON_ALREADY_ISSUED` | 409 | 발급 이력이 있어 수정 제한 |
 | `COUPON_NOT_FOUND` | 404 | 없는 쿠폰·발급·고객 페이지 토큰 |
 | `UNSUBSCRIBE_INVALID_TOKEN` | 400 | 수신거부 토큰 검증 실패 |
