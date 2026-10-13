@@ -431,6 +431,8 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | PUT | `/api/v1/coupons/{couponId}` | O M | 수정 (발급 이력이 있으면 기간 연장만 허용) |
 | GET | `/api/v1/coupons/{couponId}/issues` | O M | 발급 목록 |
 | GET | `/api/v1/customers/{customerId}/coupon-issues?usable=true` | O M | 구매 등록 화면용 사용 가능 쿠폰 |
+| GET | `/api/v1/coupon-issues/by-code/{code}` | O M | 매장 바코드: 쿠폰 번호로 조회 (상태 변경 없음) |
+| POST | `/api/v1/coupon-issues/by-code/{code}/use` | O M | 매장 바코드: 사용 처리 (1회, 오늘이 유효기간 안) |
 
 **POST /coupons**
 
@@ -477,7 +479,6 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | 메서드 | 경로 | 담당 | 설명 |
 |---|---|---|---|
 | GET | `/api/v1/public/coupons/{token}` | 팀원3 | 쿠폰 카드 정보 조회 (상태 변경 없음) |
-| POST | `/api/v1/public/coupons/{token}/use` | 팀원3 | 쿠폰 사용 처리 (1회, 유효기간 안) |
 | GET | `/api/v1/public/unsubscribe/{token}` | 팀원1 | 수신거부 확인 화면 정보 (상태 변경 없음) |
 | POST | `/api/v1/public/unsubscribe/{token}` | 팀원1 | 수신거부 처리 |
 | POST | `/api/v1/unsubscribe/one-click/{token}` | 팀원1 | 메일 헤더 원클릭 수신거부 (이메일 채널만) |
@@ -488,13 +489,23 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 **GET /public/coupons/{token} 응답 data**
 
 ```json
-{ "customerName": "김민지", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USABLE" }
+{ "code": "482913057361", "customerName": "김**", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USABLE" }
 ```
 
 `status`: `USABLE`, `USED`, `EXPIRED`, `NOT_STARTED`. 없는 토큰(UUID 형식이 아닌 값 포함): `COUPON_NOT_FOUND`(404).
 `customerName`은 첫 글자만 남기고 마스킹한다(`김**`). 이름이 없는 고객이면 `null`이고 화면에서 "고객"으로 표시한다.
 
-**POST /public/coupons/{token}/use**: 요청 본문 없음. 성공하면 위와 같은 카드(`status: "USED"`)를 돌려준다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②). 오류: `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422), `COUPON_NOT_FOUND`(404).
+`code`는 매장 바코드(Code128)에 담는 12자리 숫자 쿠폰 번호(`coupon_issue.code`)다. **고객 공개 API에는 사용 처리가 없다** — 쿠폰은 오프라인 전용이라 매장 직원이 아래 API로 처리한다(project #51).
+
+**매장 바코드 사용 처리 (7장, OWNER·MANAGER, CSRF 필요)**
+
+- `GET /api/v1/coupon-issues/by-code/{code}`: 상태를 바꾸지 않는 확인용 조회.
+- `POST /api/v1/coupon-issues/by-code/{code}/use`: 요청 본문 없음. 발급 1건당 1회, 오늘이 유효기간 안일 때만. 조건을 UPDATE 한 문장에 넣어 같은 번호를 두 번 찍어도 한 번만 성공한다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②).
+- `{code}`는 숫자 12자리. 직원이 손으로 친 공백·하이픈은 무시한다. 형식이 틀리거나 없는 번호는 `COUPON_NOT_FOUND`(404), 이미 사용 `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422). STAFF 는 403.
+
+```json
+{ "code": "482913057361", "customerName": "김**", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USED", "usedAt": "2026-10-13T14:10:00+09:00" }
+```
 
 **GET /public/unsubscribe/{token} 응답 data**
 
