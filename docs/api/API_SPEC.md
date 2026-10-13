@@ -24,7 +24,7 @@
 { "success": true, "data": { ... }, "error": null }
 
 // 실패
-{ "success": false, "data": null, "error": { "code": "SEGMENT_INVALID_RULE", "message": "조건은 최대 10개까지 추가할 수 있습니다." } }
+{ "success": false, "data": null, "error": { "code": "SEGMENT_INVALID_RULE", "message": "조건은 최대 10개까지 추가할 수 있어요." } }
 ```
 
 **페이징 응답의 `data`**
@@ -413,7 +413,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
     { "code": "DEPTH_WITHIN_LIMIT", "passed": true, "message": "분기 중첩 2단계 이내" },
     { "code": "NODE_COUNT", "passed": true, "message": "노드 11 / 15개" }
   ],
-  "warnings": [ { "code": "EMAIL_OPENED_UNRELIABLE", "message": "열람 조건 대신 클릭 조건 사용을 권장합니다." } ]
+  "warnings": [ { "code": "EMAIL_OPENED_UNRELIABLE", "message": "열람 조건 대신 클릭 조건 사용을 권장해요." } ]
 }
 ```
 
