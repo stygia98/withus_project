@@ -457,10 +457,10 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
   "page": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
 ```
 
-**GET /coupons/{couponId}/issues 응답 data** (페이징, 최근 발급순. 토큰은 고객 페이지 접근 수단이라 넣지 않는다)
+**GET /coupons/{couponId}/issues 응답 data** (페이징, 최근 발급순. 토큰은 고객 페이지 접근 수단이라 넣지 않고, 매장용 12자리 쿠폰 번호 `code`만 내린다. 화면은 `code`로 `/coupons/redeem?code=`를 열고 사용 처리·취소 API(`by-code`)를 부른다)
 
 ```json
-{ "content": [ { "issueId": 318, "customerId": 501, "customerName": "김민지", "sendLogId": 9001,
+{ "content": [ { "issueId": 318, "code": "482915037264", "customerId": 501, "customerName": "김민지", "sendLogId": 9001,
     "issuedAt": "2026-10-02T09:00:03+09:00", "usedAt": null, "status": "USABLE" } ],
   "page": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
 ```
