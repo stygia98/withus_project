@@ -682,11 +682,11 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 ```
 
 - 지표는 10장 캠페인 성과와 같은 정의다. `input`은 요약을 만든 시점의 값이며, 지표가 바뀌면 재생성한다.
-- 재생성할 때마다 `ai_report`에 새 행을 남기고, GET은 가장 최근 것을 돌려준다. 아직 요약이 없으면 `data: null`.
-- 성공 발송이 0건이면 LLM을 부르지 않고 `"model": "none"`, 안내 문장을 저장한다.
+- 재생성할 때마다 `ai_report`에 새 행을 남기되 캠페인별 **최근 10건만** 두고 오래된 것부터 지운다. GET은 가장 최근 것을 돌려준다. 아직 요약이 없으면 `data: null`.
+- 성공 발송이 0건이면 LLM을 부르지 않고 저장하지도 않는다: `AI_NO_SENT_DATA`(422).
 - 없는 캠페인: `COMMON_NOT_FOUND`(404).
 
-오류: `AI_RATE_LIMITED`(429), `AI_UNAVAILABLE`(503), `AI_PII_DETECTED`(400). LLM 요청에는 고객 개인정보를 넣지 않는다. 서버가 요청 내용에서 이메일·전화번호 패턴을 발견하면 AI로 보내지 않고 `AI_PII_DETECTED`로 거절한다.
+오류: `AI_RATE_LIMITED`(429), `AI_UNAVAILABLE`(503), `AI_PII_DETECTED`(400), `AI_NO_SENT_DATA`(422, 성과 요약만). LLM 요청에는 고객 개인정보를 넣지 않는다. 서버가 요청 내용에서 이메일·전화번호 패턴을 발견하면 AI로 보내지 않고 `AI_PII_DETECTED`로 거절한다.
 
 ## 12. 오류 코드 목록
 
@@ -731,6 +731,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | `UNSUBSCRIBE_INVALID_TOKEN` | 400 | 수신거부 토큰 검증 실패 |
 | `AI_RATE_LIMITED` | 429 | Gemini 한도 초과 |
 | `AI_UNAVAILABLE` | 503 | LLM 호출 실패 |
+| `AI_NO_SENT_DATA` | 422 | 성공 발송이 없어 성과 요약을 만들지 않음 (저장 안 함) |
 | `AI_PII_DETECTED` | 400 | 요청 내용에 이메일·전화번호 등 개인정보가 있어 AI 전송을 차단 |
 
 ## 13. 담당별 API 요약
