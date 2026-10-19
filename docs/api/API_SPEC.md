@@ -24,7 +24,7 @@
 { "success": true, "data": { ... }, "error": null }
 
 // 실패
-{ "success": false, "data": null, "error": { "code": "SEGMENT_INVALID_RULE", "message": "조건은 최대 10개까지 추가할 수 있습니다." } }
+{ "success": false, "data": null, "error": { "code": "SEGMENT_INVALID_RULE", "message": "조건은 최대 10개까지 추가할 수 있어요." } }
 ```
 
 **페이징 응답의 `data`**
@@ -72,9 +72,11 @@
 | POST | `/api/v1/auth/refresh` | 공개(쿠키) | Access 재발급, Refresh 교체 |
 | POST | `/api/v1/auth/logout` | 로그인 | Refresh 무효화, 쿠키 만료 |
 | GET | `/api/v1/auth/me` | 로그인 | 내 정보 |
+| POST | `/api/v1/auth/password` | 로그인(모든 역할) | 내 비밀번호 변경 (현재 비밀번호 확인) |
 | GET | `/api/v1/members` | O | 사용자 목록 |
 | POST | `/api/v1/members` | O | 사용자 생성 |
 | PATCH | `/api/v1/members/{memberId}` | O | 역할·활성 여부 변경 |
+| POST | `/api/v1/members/{memberId}/password` | O | 사용자 비밀번호 재설정 |
 
 **POST /auth/login**
 
@@ -86,6 +88,18 @@
 ```
 
 오류: `AUTH_INVALID_CREDENTIALS`(401), `AUTH_ACCOUNT_LOCKED`(401, `error.details.lockedUntil` 포함, 5회 실패 시 5분), `AUTH_ACCOUNT_INACTIVE`(401).
+
+**POST /auth/password** (내 비밀번호 변경 — STAFF 를 포함한 모든 로그인 사용자)
+
+```json
+// 요청 — 새 비밀번호 8~72자
+{ "currentPassword": "********", "newPassword": "********" }
+// 응답 data: null (새 ACCESS_TOKEN·REFRESH_TOKEN 쿠키를 발급한다)
+```
+
+- 현재 비밀번호를 확인한 뒤에만 바꾼다. 틀리면 로그인과 같은 카운터로 실패가 쌓이고, 5회 연속 실패 시 5분 잠긴다.
+- 바꾸면 Refresh 토큰이 교체되어 **다른 기기의 로그인은 끊기고**, 요청한 이 세션만 새 쿠키로 이어진다.
+- 오류: `AUTH_CURRENT_PASSWORD_INVALID`(400), `AUTH_PASSWORD_CHANGE_LOCKED`(429, `error.details.lockedUntil` 포함). 401 이 아니므로 프론트가 세션 만료로 오해해 로그인 화면으로 보내지 않는다.
 
 **사용자 관리 (`/members`, OWNER 전용)**
 
@@ -101,6 +115,18 @@
 - 자기 계정의 역할·활성 여부는 바꿀 수 없다(`MEMBER_SELF_CHANGE`). 이 API 는 활성 OWNER 만 부르므로 마지막 OWNER 가 사라지는 경우도 생기지 않는다.
 - 역할·활성 여부를 바꾸면 그 사용자의 Refresh 토큰을 지운다. 이미 받은 Access 토큰은 만료(30분)까지 유효하므로 **늦어도 30분 안에** 새 역할·비활성이 반영된다.
 - 오류: `MEMBER_DUPLICATE_EMAIL`(409), `MEMBER_SELF_CHANGE`(400), 없는 사용자 `COMMON_NOT_FOUND`(404).
+
+**POST /members/{memberId}/password** (비밀번호 재설정, OWNER 전용)
+
+```json
+// 요청 — 새 비밀번호는 OWNER 가 정해 그 사용자에게 직접 전달한다(8~72자). 응답 data: null
+{ "newPassword": "********" }
+```
+
+- 기존 비밀번호는 BCrypt 해시로만 저장되어 조회·표시할 수 없다. 이 API 는 새 비밀번호로 덮어쓰기만 한다.
+- 그 사용자의 Refresh 토큰을 지워 기존 로그인을 끊고, 로그인 실패 횟수·잠금도 풀린다. 이미 받은 Access 토큰은 만료(30분)까지 유효하다.
+- 자기 계정은 재설정할 수 없다(`MEMBER_SELF_PASSWORD`, 400). 본인은 `POST /auth/password` 를 쓴다.
+- 오류: `MEMBER_SELF_PASSWORD`(400), 없는 사용자 `COMMON_NOT_FOUND`(404), 비밀번호 길이 위반 `COMMON_INVALID_INPUT`(400).
 
 ## 3. 고객 (팀원1 · `customer`)
 
@@ -300,6 +326,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | POST | `/api/v1/campaigns/{campaignId}/resume` | O M | 재개 (PAUSED → ACTIVE) |
 | POST | `/api/v1/campaigns/{campaignId}/complete` | O M | 종료 (→ COMPLETED, 인스턴스 CANCELLED) |
 | POST | `/api/v1/campaigns/{campaignId}/duplicate` | O M | 복제 (새 DRAFT) |
+| DELETE | `/api/v1/campaigns/{campaignId}` | O M | 삭제 (DRAFT만, 발송 기록이 있으면 불가) |
 | PUT | `/api/v1/campaigns/{campaignId}/ab-test` | O M | A/B 설정 (일회성, DRAFT만) |
 | GET | `/api/v1/campaigns/{campaignId}/workflow` | O M S(R) | 워크플로우 노드 조회 |
 | PUT | `/api/v1/campaigns/{campaignId}/workflow` | O M | 워크플로우 저장 (DRAFT만, 저장 시 검증) |
@@ -345,6 +372,13 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 - 쿠폰 기간이 지났거나 템플릿·세그먼트가 삭제된 원본도 복제는 되고, 시작할 때 기존 검사(`COUPON_OUT_OF_PERIOD` 등)가 막는다.
 - 권한은 O·M 이며 STAFF 는 403. 오류: `CAMPAIGN_NOT_FOUND`(404).
 
+**DELETE /campaigns/{id}**: 요청 본문 없음, 응답 `data` 는 `null`. **`DRAFT` 상태만 삭제**한다.
+
+- 발송 기록(`send_log`)은 통계와 법규상 기록이라 지우지 않는다. 그래서 `SCHEDULED` 는 먼저 `cancel-schedule` 로 `DRAFT` 로 되돌려야 하고, `ACTIVE`·`PAUSED`·`COMPLETED` 는 삭제할 수 없다.
+- 워크플로우 노드(`workflow_step`)와 A/B 설정은 함께 지워진다. 시작이 실패해 남은 아직 선점되지 않은 `PENDING` 적재분은 삭제 전에 먼저 치운다.
+- 처리된 발송 기록·워크플로우 인스턴스·AI 리포트가 이 캠페인을 참조하면 삭제할 수 없다(`CAMPAIGN_INVALID_STATUS`, 409). 시작 선점 중인 캠페인도 같다.
+- 권한은 O·M 이며 STAFF 는 403. 오류: `CAMPAIGN_INVALID_STATUS`(409), `CAMPAIGN_NOT_FOUND`(404).
+
 **PUT /campaigns/{id}/workflow**
 
 ```json
@@ -379,7 +413,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
     { "code": "DEPTH_WITHIN_LIMIT", "passed": true, "message": "분기 중첩 2단계 이내" },
     { "code": "NODE_COUNT", "passed": true, "message": "노드 11 / 15개" }
   ],
-  "warnings": [ { "code": "EMAIL_OPENED_UNRELIABLE", "message": "열람 조건 대신 클릭 조건 사용을 권장합니다." } ]
+  "warnings": [ { "code": "EMAIL_OPENED_UNRELIABLE", "message": "열람 조건 대신 클릭 조건 사용을 권장해요." } ]
 }
 ```
 
@@ -397,6 +431,9 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | PUT | `/api/v1/coupons/{couponId}` | O M | 수정 (발급 이력이 있으면 기간 연장만 허용) |
 | GET | `/api/v1/coupons/{couponId}/issues` | O M | 발급 목록 |
 | GET | `/api/v1/customers/{customerId}/coupon-issues?usable=true` | O M | 구매 등록 화면용 사용 가능 쿠폰 |
+| GET | `/api/v1/coupon-issues/by-code/{code}` | O M | 매장 바코드: 쿠폰 번호로 조회 (상태 변경 없음) |
+| POST | `/api/v1/coupon-issues/by-code/{code}/use` | O M | 매장 바코드: 사용 처리 (1회, 오늘이 유효기간 안) |
+| POST | `/api/v1/coupon-issues/by-code/{code}/cancel-use` | O M | 매장 바코드: 사용 취소 (잘못 찍은 사용 처리 되돌리기) |
 
 **POST /coupons**
 
@@ -420,10 +457,10 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
   "page": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
 ```
 
-**GET /coupons/{couponId}/issues 응답 data** (페이징, 최근 발급순. 토큰은 고객 페이지 접근 수단이라 넣지 않는다)
+**GET /coupons/{couponId}/issues 응답 data** (페이징, 최근 발급순. 권한 O M. 매장용 12자리 쿠폰 번호 `code`와 고객 쿠폰 페이지 주소용 `token`을 내린다. 화면은 쿠폰 번호 링크를 `/c/{token}`으로 걸고, 사용 처리·취소는 `code`로 `by-code` API를 부른다)
 
 ```json
-{ "content": [ { "issueId": 318, "customerId": 501, "customerName": "김민지", "sendLogId": 9001,
+{ "content": [ { "issueId": 318, "code": "482915037264", "token": "a99ba666-df79-4335-ba8d-676ed335cdaf", "customerId": 501, "customerName": "김민지", "sendLogId": 9001,
     "issuedAt": "2026-10-02T09:00:03+09:00", "usedAt": null, "status": "USABLE" } ],
   "page": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
 ```
@@ -443,7 +480,6 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | 메서드 | 경로 | 담당 | 설명 |
 |---|---|---|---|
 | GET | `/api/v1/public/coupons/{token}` | 팀원3 | 쿠폰 카드 정보 조회 (상태 변경 없음) |
-| POST | `/api/v1/public/coupons/{token}/use` | 팀원3 | 쿠폰 사용 처리 (1회, 유효기간 안) |
 | GET | `/api/v1/public/unsubscribe/{token}` | 팀원1 | 수신거부 확인 화면 정보 (상태 변경 없음) |
 | POST | `/api/v1/public/unsubscribe/{token}` | 팀원1 | 수신거부 처리 |
 | POST | `/api/v1/unsubscribe/one-click/{token}` | 팀원1 | 메일 헤더 원클릭 수신거부 (이메일 채널만) |
@@ -454,13 +490,24 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 **GET /public/coupons/{token} 응답 data**
 
 ```json
-{ "customerName": "김민지", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USABLE" }
+{ "code": "482913057361", "customerName": "김**", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USABLE" }
 ```
 
 `status`: `USABLE`, `USED`, `EXPIRED`, `NOT_STARTED`. 없는 토큰(UUID 형식이 아닌 값 포함): `COUPON_NOT_FOUND`(404).
 `customerName`은 첫 글자만 남기고 마스킹한다(`김**`). 이름이 없는 고객이면 `null`이고 화면에서 "고객"으로 표시한다.
 
-**POST /public/coupons/{token}/use**: 요청 본문 없음. 성공하면 위와 같은 카드(`status: "USED"`)를 돌려준다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②). 오류: `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422), `COUPON_NOT_FOUND`(404).
+`code`는 매장 바코드(Code128)에 담는 12자리 숫자 쿠폰 번호(`coupon_issue.code`)다. **고객 공개 API에는 사용 처리가 없다** — 쿠폰은 오프라인 전용이라 매장 직원이 아래 API로 처리한다(project #51).
+
+**매장 바코드 사용 처리 (7장, OWNER·MANAGER, CSRF 필요)**
+
+- `GET /api/v1/coupon-issues/by-code/{code}`: 상태를 바꾸지 않는 확인용 조회.
+- `POST /api/v1/coupon-issues/by-code/{code}/use`: 요청 본문 없음. 발급 1건당 1회, 오늘이 유효기간 안일 때만. 조건을 UPDATE 한 문장에 넣어 같은 번호를 두 번 찍어도 한 번만 성공한다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②).
+- `{code}`는 숫자 12자리. 직원이 손으로 친 공백·하이픈은 무시한다. 형식이 틀리거나 없는 번호는 `COUPON_NOT_FOUND`(404), 이미 사용 `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422). STAFF 는 403.
+- `POST /api/v1/coupon-issues/by-code/{code}/cancel-use`: 요청 본문 없음. `used_at`을 비워 다시 쓸 수 있게 하고 전환 집계(used_at 기준)에서도 빠진다. 조건을 UPDATE 한 문장에 넣는다. 응답은 위와 같은 쿠폰(취소 후 상태). 오류: 사용 전 `COUPON_NOT_USED`(409), 구매 등록으로 쓴 쿠폰(`purchase`에 연결) `COUPON_USED_BY_PURCHASE`(409, 금액·누적구매액이 함께 기록돼 여기서 되돌리지 않음), 없는 번호 `COUPON_NOT_FOUND`(404). STAFF 는 403.
+
+```json
+{ "code": "482913057361", "customerName": "김**", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USED", "usedAt": "2026-10-13T14:10:00+09:00" }
+```
 
 **GET /public/unsubscribe/{token} 응답 data**
 
@@ -655,6 +702,9 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | `AUTH_ACCOUNT_INACTIVE` | 401 | 비활성 계정 |
 | `MEMBER_DUPLICATE_EMAIL` | 409 | 이미 등록된 사용자 이메일 |
 | `MEMBER_SELF_CHANGE` | 400 | 자기 계정의 역할·활성 여부 변경 시도 |
+| `MEMBER_SELF_PASSWORD` | 400 | 자기 계정을 사용자 관리에서 비밀번호 재설정 시도 |
+| `AUTH_CURRENT_PASSWORD_INVALID` | 400 | 비밀번호 변경 시 현재 비밀번호 불일치 |
+| `AUTH_PASSWORD_CHANGE_LOCKED` | 429 | 현재 비밀번호 5회 실패로 변경 잠금 |
 | `AUTH_FORBIDDEN` | 403 | 권한 없음 |
 | `AUTH_CSRF_INVALID` | 403 | CSRF 토큰 없음·불일치 |
 | `CUSTOMER_DUPLICATE_EMAIL` | 409 | 삭제되지 않은 고객 중 같은 이메일 존재 |
@@ -675,6 +725,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | `COUPON_INVALID_PERIOD` / `_RATE_CAP_REQUIRED` | 400 | 쿠폰 정의 오류 |
 | `COUPON_OUT_OF_PERIOD` | 422 | 유효기간 밖 |
 | `COUPON_NOT_USABLE` / `COUPON_ALREADY_USED` | 422 / 409 | 사용 불가 |
+| `COUPON_NOT_USED` / `COUPON_USED_BY_PURCHASE` | 409 / 409 | 매장 바코드 사용 취소 불가 |
 | `COUPON_ALREADY_ISSUED` | 409 | 발급 이력이 있어 수정 제한 |
 | `COUPON_NOT_FOUND` | 404 | 없는 쿠폰·발급·고객 페이지 토큰 |
 | `UNSUBSCRIBE_INVALID_TOKEN` | 400 | 수신거부 토큰 검증 실패 |
