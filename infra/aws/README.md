@@ -25,7 +25,7 @@
 
 ### 1. RDS PostgreSQL 17
 - 자동 백업 7일, 퍼블릭 액세스 없음, 보안 그룹은 **EC2 보안 그룹에서 5432 만** 허용.
-- DB 이름 `withus`. 스키마는 백엔드 기동 시 Flyway 가 `db/migration`(V1·V20·V21·V30)만 적용한다 — 시드는 들어가지 않는다. **운영 DB 를 직접 수정하지 않는다.**
+- DB 이름 `withus`. 스키마는 백엔드 기동 시 Flyway 가 `db/migration` 의 버전 마이그레이션(`V*`)만 적용한다 — 목록은 그 폴더가 기준이다(2026-10-19 기준 V1·V20·V21·V30·V31·V32). 시드(`db/seed/local`)는 들어가지 않는다. **운영 DB 를 직접 수정하지 않는다.**
 
 ### 2. S3 버킷
 - 버킷 생성 → `policies/s3-bucket-policy.json` 의 `<S3_BUCKET>` 을 바꿔 버킷 정책으로 적용.
