@@ -431,9 +431,9 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | PUT | `/api/v1/coupons/{couponId}` | O M | 수정 (발급 이력이 있으면 기간 연장만 허용) |
 | GET | `/api/v1/coupons/{couponId}/issues` | O M | 발급 목록 |
 | GET | `/api/v1/customers/{customerId}/coupon-issues?usable=true` | O M | 구매 등록 화면용 사용 가능 쿠폰 |
-| GET | `/api/v1/coupon-issues/by-code/{code}` | O M | 매장 바코드: 쿠폰 번호로 조회 (상태 변경 없음) |
-| POST | `/api/v1/coupon-issues/by-code/{code}/use` | O M | 매장 바코드: 사용 처리 (1회, 오늘이 유효기간 안) |
-| POST | `/api/v1/coupon-issues/by-code/{code}/cancel-use` | O M | 매장 바코드: 사용 취소 (잘못 찍은 사용 처리 되돌리기) |
+| GET | `/api/v1/coupon-issues/by-code/{code}` | O M S | 매장 바코드: 쿠폰 번호로 조회 (상태 변경 없음) |
+| POST | `/api/v1/coupon-issues/by-code/{code}/use` | O M S | 매장 바코드: 사용 처리 (1회, 오늘이 유효기간 안) |
+| POST | `/api/v1/coupon-issues/by-code/{code}/cancel-use` | O M S | 매장 바코드: 사용 취소 (잘못 찍은 사용 처리 되돌리기) |
 
 **POST /coupons**
 
@@ -498,12 +498,12 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 
 `code`는 매장 바코드(Code128)에 담는 12자리 숫자 쿠폰 번호(`coupon_issue.code`)다. **고객 공개 API에는 사용 처리가 없다** — 쿠폰은 오프라인 전용이라 매장 직원이 아래 API로 처리한다(project #51).
 
-**매장 바코드 사용 처리 (7장, OWNER·MANAGER, CSRF 필요)**
+**매장 바코드 사용 처리 (7장, OWNER·MANAGER·STAFF, CSRF 필요)** — 매장 직원이 처리하도록 2026-10-19 STAFF 허용. 구매 등록(`POST /customers/{id}/purchases`)은 그대로 O M
 
 - `GET /api/v1/coupon-issues/by-code/{code}`: 상태를 바꾸지 않는 확인용 조회.
 - `POST /api/v1/coupon-issues/by-code/{code}/use`: 요청 본문 없음. 발급 1건당 1회, 오늘이 유효기간 안일 때만. 조건을 UPDATE 한 문장에 넣어 같은 번호를 두 번 찍어도 한 번만 성공한다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②).
-- `{code}`는 숫자 12자리. 직원이 손으로 친 공백·하이픈은 무시한다. 형식이 틀리거나 없는 번호는 `COUPON_NOT_FOUND`(404), 이미 사용 `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422). STAFF 는 403.
-- `POST /api/v1/coupon-issues/by-code/{code}/cancel-use`: 요청 본문 없음. `used_at`을 비워 다시 쓸 수 있게 하고 전환 집계(used_at 기준)에서도 빠진다. 조건을 UPDATE 한 문장에 넣는다. 응답은 위와 같은 쿠폰(취소 후 상태). 오류: 사용 전 `COUPON_NOT_USED`(409), 구매 등록으로 쓴 쿠폰(`purchase`에 연결) `COUPON_USED_BY_PURCHASE`(409, 금액·누적구매액이 함께 기록돼 여기서 되돌리지 않음), 없는 번호 `COUPON_NOT_FOUND`(404). STAFF 는 403.
+- `{code}`는 숫자 12자리. 직원이 손으로 친 공백·하이픈은 무시한다. 형식이 틀리거나 없는 번호는 `COUPON_NOT_FOUND`(404), 이미 사용 `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422).
+- `POST /api/v1/coupon-issues/by-code/{code}/cancel-use`: 요청 본문 없음. `used_at`을 비워 다시 쓸 수 있게 하고 전환 집계(used_at 기준)에서도 빠진다. 조건을 UPDATE 한 문장에 넣는다. 응답은 위와 같은 쿠폰(취소 후 상태). 오류: 사용 전 `COUPON_NOT_USED`(409), 구매 등록으로 쓴 쿠폰(`purchase`에 연결) `COUPON_USED_BY_PURCHASE`(409, 금액·누적구매액이 함께 기록돼 여기서 되돌리지 않음), 없는 번호 `COUPON_NOT_FOUND`(404).
 
 ```json
 { "code": "482913057361", "customerName": "김**", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USED", "usedAt": "2026-10-13T14:10:00+09:00" }
