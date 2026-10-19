@@ -636,6 +636,9 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | GET | `/api/v1/ai/send-time-recommendations` | O M | AI-02 발송 시간 추천 (`targetCount`, `adYn`) |
 | POST | `/api/v1/ai/reports/campaigns/{campaignId}` | O M | AI-03 성과 요약 생성·재생성 |
 | GET | `/api/v1/ai/reports/campaigns/{campaignId}` | O M S | 최근 요약 조회 |
+| POST | `/api/v1/ai/campaign-plans` | O M | AI-04 캠페인 기획 초안 (저장 안 함) |
+| POST | `/api/v1/ai/campaign-plans/apply` | O M | AI-04 초안 저장 (타겟팅·쿠폰·템플릿·캠페인 DRAFT) |
+| POST | `/api/v1/ai/campaign-plans/examples` | O M | AI-04 목표 예시 4개 새로 만들기 (저장 안 함) |
 
 **POST /ai/copy-drafts**
 
@@ -685,6 +688,57 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 - 재생성할 때마다 `ai_report`에 새 행을 남기되 캠페인별 **최근 10건만** 두고 오래된 것부터 지운다. GET은 가장 최근 것을 돌려준다. 아직 요약이 없으면 `data: null`.
 - 성공 발송이 0건이면 LLM을 부르지 않고 저장하지도 않는다: `AI_NO_SENT_DATA`(422).
 - 없는 캠페인: `COMMON_NOT_FOUND`(404).
+
+**POST /ai/campaign-plans** (AI-04 초안, 저장하지 않음)
+
+```json
+// 요청
+{ "goal": "부산 고객에게 이번 주말 10% 할인 쿠폰" }
+// 응답 data (plan 은 저장 API 요청 본문과 같은 형식)
+{
+  "plan": {
+    "campaignName": "부산 주말 특가", "channel": "EMAIL",
+    "segment": { "name": "부산 메일 동의 고객", "rule": { "operator": "AND", "groups": [ { "operator": "AND", "conditions": [
+      { "field": "region", "op": "EQ", "value": "BUSAN" }, { "field": "emailConsent", "op": "EQ", "value": "Y" } ] } ] } },
+    "coupon": { "name": "주말 10% 할인", "discountType": "RATE", "discountValue": 10, "maxDiscountAmount": 10000,
+      "validFrom": "2026-10-19", "validTo": "2026-10-25" },
+    "template": { "name": "부산 주말 특가 안내", "subject": "{{name|고객}}님, 이번 주말 10% 할인", "body": "문단1\n\n문단2" }
+  },
+  "target": { "total": 39, "emailConsent": 39, "smsConsent": 26, "dormant": 13 }
+}
+```
+
+- `goal`은 300자 이하. 이메일·전화번호 패턴이 있으면 `AI_PII_DETECTED`(400). LLM에는 목표 문장과 허용 필드·연산자·지역 코드 목록만 보낸다(고객 데이터 없음).
+- 규칙은 한 그룹(AND)이며, 채널 수신동의 조건(`emailConsent`/`smsConsent` = Y)이 없으면 서버가 넣는다. 4장 세그먼트와 같은 화이트리스트로 검증하고, 맞지 않으면 `AI_UNAVAILABLE`(503, 다시 만들기).
+- 쿠폰 날짜는 서버가 정한다: `validFrom` = 오늘(서울), 기간 1~90일(기본 7일, 당일 포함). 정률인데 최대 할인액이 없으면 10,000원을 넣는다. 목표에 할인이 없으면 `coupon: null`.
+- `template.body`는 빈 줄로 문단을 나눈 평문이다. AI-01과 같은 정리 규칙(치환자는 `{{name|고객}}`만, HTML·`(광고)`·수신거부 문구 제거)을 거친다. SMS는 `subject: null`.
+- `target`은 4장 `POST /segments/preview`와 같은 형식이다.
+
+**POST /ai/campaign-plans/examples** (AI-04 목표 예시, 저장하지 않음)
+
+```json
+// 요청 (current: 지금 화면에 보이는 예시, 생략 가능)
+{ "current": ["최근 30일 가입 고객에게 환영 메일과 5,000원 쿠폰"] }
+// 응답 data
+{ "examples": ["부산 고객에게 이번 주말 10% 할인 쿠폰", "...", "...", "..."] }
+```
+
+- 목표 입력칸 아래 예시 버튼을 바꾼다. 누를 때마다 다르게 나오도록 높은 온도로 요청하고, `current`와 겹치지 않게 한다. 화면의 첫 예시는 고정 문구다.
+- LLM에는 쓸 수 있는 대상 조건 종류와 `current`만 보낸다(고객 데이터 없음). 응답은 한 줄로 정리하고 목록 번호·따옴표를 떼며 60자에서 자른다. 중복을 뺀 뒤 4개가 안 되면 `AI_UNAVAILABLE`(503).
+- `current`는 10개·각 100자 이하. Gemini 호출 1회를 쓴다.
+
+**POST /ai/campaign-plans/apply** (AI-04 저장, LLM 호출 없음)
+
+```json
+// 요청: 위 plan (화면에서 고친 값)
+// 응답 data
+{ "campaignId": 6661, "segmentId": 6431, "couponId": 2081, "templateId": 3301 }
+```
+
+- 한 트랜잭션에서 세그먼트(4장) → 쿠폰(7장, 있을 때만) → 템플릿(5장, `adYn = Y`) → 일회성 캠페인(6장, **DRAFT**) 순서로 각 도메인 서비스가 만든다. 하나라도 실패하면 아무것도 저장하지 않는다.
+- 템플릿 본문: 메일은 문단을 `<p>`로 바꾸고(HTML 이스케이프), 쿠폰이 있으면 `<a href="{{couponUrl}}">쿠폰 받기</a>`를 서버가 붙인다. SMS는 `쿠폰 받기: {{couponUrl}}` 줄을 붙인다. `(광고)`·수신거부 문구는 지금처럼 발송 시 자동 삽입한다.
+- 자동으로 시작·예약하지 않는다. 발송은 6장 `start`·`schedule`로 사람이 한다.
+- 오류: 각 도메인 검증 오류를 그대로 돌려준다(`SEGMENT_INVALID_RULE`, `COUPON_INVALID_PERIOD`, `COUPON_RATE_CAP_REQUIRED`, `TEMPLATE_SUBJECT_REQUIRED`, `TEMPLATE_INVALID_PLACEHOLDER` 등). 본문 형식 오류는 `COMMON_INVALID_INPUT`(400).
 
 오류: `AI_RATE_LIMITED`(429), `AI_UNAVAILABLE`(503), `AI_PII_DETECTED`(400), `AI_NO_SENT_DATA`(422, 성과 요약만). LLM 요청에는 고객 개인정보를 넣지 않는다. 서버가 요청 내용에서 이메일·전화번호 패턴을 발견하면 AI로 보내지 않고 `AI_PII_DETECTED`로 거절한다.
 
