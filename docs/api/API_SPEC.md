@@ -75,8 +75,11 @@
 | POST | `/api/v1/auth/password` | 로그인(모든 역할) | 내 비밀번호 변경 (현재 비밀번호 확인) |
 | GET | `/api/v1/members` | O | 사용자 목록 |
 | POST | `/api/v1/members` | O | 사용자 생성 |
-| PATCH | `/api/v1/members/{memberId}` | O | 역할·활성 여부 변경 |
+| PATCH | `/api/v1/members/{memberId}` | O | 이름·이메일·역할·활성 여부 변경 |
 | POST | `/api/v1/members/{memberId}/password` | O | 사용자 비밀번호 재설정 |
+| DELETE | `/api/v1/members/{memberId}` | O | 계정 삭제 (삭제 표시, 복구 가능) |
+| GET | `/api/v1/members/deleted` | O | 삭제한 계정 목록 |
+| POST | `/api/v1/members/{memberId}/restore` | O | 삭제한 계정 복구 |
 
 **POST /auth/login**
 
@@ -104,17 +107,26 @@
 **사용자 관리 (`/members`, OWNER 전용)**
 
 ```json
-// GET 응답 data (member_id 순, 사용자 수가 적어 페이징 없음). POST·PATCH 응답 data 는 이 형식 1건
-[ { "memberId": 2, "email": "manager@withus.kr", "name": "김마케팅", "role": "MANAGER", "active": true } ]
+// GET 응답 data (member_id 순, 삭제한 계정 제외, 사용자 수가 적어 페이징 없음). POST·PATCH·restore 응답 data 는 이 형식 1건
+[ { "memberId": 2, "email": "manager@withus.kr", "name": "김마케팅", "role": "MANAGER", "active": true, "deletedAt": null } ]
 // POST 요청 — 초기 비밀번호는 OWNER 가 정해 전달한다(8~72자). 이메일은 소문자·trim 으로 저장
 { "email": "staff@withus.kr", "name": "박직원", "role": "STAFF", "password": "********" }
-// PATCH 요청 — 보내지 않은 값은 그대로
-{ "role": "MANAGER", "active": false }
+// PATCH 요청 — 보내지 않은 값은 그대로. 이름 1~50자, 이메일은 소문자·trim 으로 저장
+{ "name": "박직원", "email": "staff2@withus.kr", "role": "MANAGER", "active": false }
 ```
 
-- 자기 계정의 역할·활성 여부는 바꿀 수 없다(`MEMBER_SELF_CHANGE`). 이 API 는 활성 OWNER 만 부르므로 마지막 OWNER 가 사라지는 경우도 생기지 않는다.
-- 역할·활성 여부를 바꾸면 그 사용자의 Refresh 토큰을 지운다. 이미 받은 Access 토큰은 만료(30분)까지 유효하므로 **늦어도 30분 안에** 새 역할·비활성이 반영된다.
-- 오류: `MEMBER_DUPLICATE_EMAIL`(409), `MEMBER_SELF_CHANGE`(400), 없는 사용자 `COMMON_NOT_FOUND`(404).
+- 자기 계정의 역할·활성 여부는 바꿀 수 없다(`MEMBER_SELF_CHANGE`). 이 API 는 활성 OWNER 만 부르므로 마지막 OWNER 가 사라지는 경우도 생기지 않는다. **이름·이메일은 자기 계정도 바꿀 수 있다.**
+- 역할·활성 여부를 바꾸면 그 사용자의 Refresh 토큰을 지운다. 이미 받은 Access 토큰은 만료(30분)까지 유효하므로 **늦어도 30분 안에** 새 역할·비활성이 반영된다. 이름·이메일만 바꾸면 로그인을 끊지 않는다(토큰은 `member_id` 기준이라 다음 로그인부터 새 이메일을 쓴다).
+- 이메일은 **삭제되지 않은 계정끼리** 유일하다. 겹치면 `MEMBER_DUPLICATE_EMAIL`(409).
+- 오류: `MEMBER_DUPLICATE_EMAIL`(409), `MEMBER_SELF_CHANGE`(400), 형식 오류 `COMMON_INVALID_INPUT`(400), 없는 사용자·삭제한 계정 `COMMON_NOT_FOUND`(404).
+
+**DELETE /members/{memberId}** (계정 삭제 — 삭제 표시) / **GET /members/deleted** / **POST /members/{memberId}/restore**
+
+- 계정은 `campaign`·`segment`·`template`·`purchase` 의 `created_by` 로 참조돼 행을 지우지 않는다. `member.deleted_at` 에 시각만 기록하고 이름·이메일·비밀번호·역할은 남긴다. 만든 기록의 작성자는 그대로다.
+- 삭제하면 목록·로그인에서 빠지고 그 사용자의 Refresh 토큰을 지운다(Access 는 최대 30분 유효). 같은 이메일로 새 계정을 만들 수 있다. 응답 data: `null`.
+- 자기 계정은 삭제할 수 없다(`MEMBER_SELF_DELETE`, 400). 이미 삭제했거나 없는 계정은 `COMMON_NOT_FOUND`(404).
+- `GET /members/deleted`: 삭제한 계정 목록(최근 삭제순, `deletedAt` 포함).
+- `restore`: 삭제 표시를 지워 **예전 비밀번호로 다시 로그인**할 수 있게 한다(로그인 실패 잠금도 풀린다). 같은 이메일의 계정이 다시 생겼으면 `MEMBER_DUPLICATE_EMAIL`(409) — 그 계정의 이메일을 먼저 바꾼다. 삭제된 계정이 아니면 `COMMON_NOT_FOUND`(404).
 
 **POST /members/{memberId}/password** (비밀번호 재설정, OWNER 전용)
 
@@ -431,9 +443,9 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | PUT | `/api/v1/coupons/{couponId}` | O M | 수정 (발급 이력이 있으면 기간 연장만 허용) |
 | GET | `/api/v1/coupons/{couponId}/issues` | O M | 발급 목록 |
 | GET | `/api/v1/customers/{customerId}/coupon-issues?usable=true` | O M | 구매 등록 화면용 사용 가능 쿠폰 |
-| GET | `/api/v1/coupon-issues/by-code/{code}` | O M | 매장 바코드: 쿠폰 번호로 조회 (상태 변경 없음) |
-| POST | `/api/v1/coupon-issues/by-code/{code}/use` | O M | 매장 바코드: 사용 처리 (1회, 오늘이 유효기간 안) |
-| POST | `/api/v1/coupon-issues/by-code/{code}/cancel-use` | O M | 매장 바코드: 사용 취소 (잘못 찍은 사용 처리 되돌리기) |
+| GET | `/api/v1/coupon-issues/by-code/{code}` | O M S | 매장 바코드: 쿠폰 번호로 조회 (상태 변경 없음) |
+| POST | `/api/v1/coupon-issues/by-code/{code}/use` | O M S | 매장 바코드: 사용 처리 (1회, 오늘이 유효기간 안) |
+| POST | `/api/v1/coupon-issues/by-code/{code}/cancel-use` | O M S | 매장 바코드: 사용 취소 (잘못 찍은 사용 처리 되돌리기) |
 
 **POST /coupons**
 
@@ -498,12 +510,12 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 
 `code`는 매장 바코드(Code128)에 담는 12자리 숫자 쿠폰 번호(`coupon_issue.code`)다. **고객 공개 API에는 사용 처리가 없다** — 쿠폰은 오프라인 전용이라 매장 직원이 아래 API로 처리한다(project #51).
 
-**매장 바코드 사용 처리 (7장, OWNER·MANAGER, CSRF 필요)**
+**매장 바코드 사용 처리 (7장, OWNER·MANAGER·STAFF, CSRF 필요)** — 매장 직원이 처리하도록 2026-10-19 STAFF 허용. 구매 등록(`POST /customers/{id}/purchases`)은 그대로 O M
 
 - `GET /api/v1/coupon-issues/by-code/{code}`: 상태를 바꾸지 않는 확인용 조회.
 - `POST /api/v1/coupon-issues/by-code/{code}/use`: 요청 본문 없음. 발급 1건당 1회, 오늘이 유효기간 안일 때만. 조건을 UPDATE 한 문장에 넣어 같은 번호를 두 번 찍어도 한 번만 성공한다. `coupon_issue.used_at`만 기록하고 `purchase`는 만들지 않는다(PRD F-10 ②).
-- `{code}`는 숫자 12자리. 직원이 손으로 친 공백·하이픈은 무시한다. 형식이 틀리거나 없는 번호는 `COUPON_NOT_FOUND`(404), 이미 사용 `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422). STAFF 는 403.
-- `POST /api/v1/coupon-issues/by-code/{code}/cancel-use`: 요청 본문 없음. `used_at`을 비워 다시 쓸 수 있게 하고 전환 집계(used_at 기준)에서도 빠진다. 조건을 UPDATE 한 문장에 넣는다. 응답은 위와 같은 쿠폰(취소 후 상태). 오류: 사용 전 `COUPON_NOT_USED`(409), 구매 등록으로 쓴 쿠폰(`purchase`에 연결) `COUPON_USED_BY_PURCHASE`(409, 금액·누적구매액이 함께 기록돼 여기서 되돌리지 않음), 없는 번호 `COUPON_NOT_FOUND`(404). STAFF 는 403.
+- `{code}`는 숫자 12자리. 직원이 손으로 친 공백·하이픈은 무시한다. 형식이 틀리거나 없는 번호는 `COUPON_NOT_FOUND`(404), 이미 사용 `COUPON_ALREADY_USED`(409), 기간 밖 `COUPON_NOT_USABLE`(422).
+- `POST /api/v1/coupon-issues/by-code/{code}/cancel-use`: 요청 본문 없음. `used_at`을 비워 다시 쓸 수 있게 하고 전환 집계(used_at 기준)에서도 빠진다. 조건을 UPDATE 한 문장에 넣는다. 응답은 위와 같은 쿠폰(취소 후 상태). 오류: 사용 전 `COUPON_NOT_USED`(409), 구매 등록으로 쓴 쿠폰(`purchase`에 연결) `COUPON_USED_BY_PURCHASE`(409, 금액·누적구매액이 함께 기록돼 여기서 되돌리지 않음), 없는 번호 `COUPON_NOT_FOUND`(404).
 
 ```json
 { "code": "482913057361", "customerName": "김**", "couponName": "가을 감사 쿠폰", "discountType": "AMOUNT", "discountValue": 5000, "maxDiscountAmount": null, "validFrom": "2026-10-01", "validTo": "2026-10-31", "status": "USED", "usedAt": "2026-10-13T14:10:00+09:00" }
@@ -757,6 +769,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 | `MEMBER_DUPLICATE_EMAIL` | 409 | 이미 등록된 사용자 이메일 |
 | `MEMBER_SELF_CHANGE` | 400 | 자기 계정의 역할·활성 여부 변경 시도 |
 | `MEMBER_SELF_PASSWORD` | 400 | 자기 계정을 사용자 관리에서 비밀번호 재설정 시도 |
+| `MEMBER_SELF_DELETE` | 400 | 자기 계정 삭제 시도 |
 | `AUTH_CURRENT_PASSWORD_INVALID` | 400 | 비밀번호 변경 시 현재 비밀번호 불일치 |
 | `AUTH_PASSWORD_CHANGE_LOCKED` | 429 | 현재 비밀번호 5회 실패로 변경 잠금 |
 | `AUTH_FORBIDDEN` | 403 | 권한 없음 |
