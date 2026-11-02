@@ -716,7 +716,8 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
       "validFrom": "2026-10-19", "validTo": "2026-10-25" },
     "template": { "name": "부산 주말 특가 안내", "subject": "{{name|고객}}님, 이번 주말 10% 할인", "body": "문단1\n\n문단2" }
   },
-  "target": { "total": 39, "emailConsent": 39, "smsConsent": 26, "dormant": 13 }
+  "target": { "total": 39, "emailConsent": 39, "smsConsent": 26, "dormant": 13 },
+  "unsupported": []
 }
 ```
 
@@ -725,6 +726,9 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 - 쿠폰 날짜는 서버가 정한다: `validFrom` = 오늘(서울), 기간 1~90일(기본 7일, 당일 포함). 정률인데 최대 할인액이 없으면 10,000원을 넣는다. 목표에 할인이 없으면 `coupon: null`.
 - `template.body`는 빈 줄로 문단을 나눈 평문이다. AI-01과 같은 정리 규칙(치환자는 `{{name|고객}}`만, HTML·`(광고)`·수신거부 문구 제거)을 거친다. SMS는 `subject: null`.
 - `target`은 4장 `POST /segments/preview`와 같은 형식이다.
+- 날짜 기준: LLM은 오늘 날짜를 모르므로 서버가 오늘·어제·올해·작년(서울)을 프롬프트에 넣는다. `joinedAt`은 최근 가입이면 `IN_LAST_DAYS`(1~3650, 오늘 가입은 1), 정해진 날짜·기간(어제, 작년 등)이면 `BETWEEN [첫날, 마지막 날]`, 가입한 지 오래된 고객이면 `BETWEEN ["2000-01-01", 오늘−기간]`으로 만든다. LLM이 오늘 가입을 `IN_LAST_DAYS 0`으로 보내면 서버가 1로 바꾼다(뜻이 같다). 그 밖의 범위 밖 값은 `AI_UNAVAILABLE`.
+- `unsupported`: 목표에 있었지만 허용 필드로 나타낼 수 없어 규칙에서 뺀 조건(예: `"생일"`, `"성별(여성)"`)이다. 비슷한 필드로 바꿔 넣지 않는다. 화면은 이 목록을 경고로 보여 주고, 관리자는 대상 수를 확인한 뒤 저장한다. 최대 5개·각 30자, 없으면 `[]`. 저장 API(`plan`)에는 포함하지 않는다.
+- 쿠폰 할인 유형: 목표에 퍼센트가 있을 때만 정률(RATE)이다. 쿠폰·할인은 있지만 숫자가 없으면 정액 5,000원으로 만든다(할인율을 지어내지 않는다).
 
 **POST /ai/campaign-plans/examples** (AI-04 목표 예시, 저장하지 않음)
 
