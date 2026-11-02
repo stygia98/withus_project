@@ -690,7 +690,7 @@ send_log에 kind=TEST, priority=1로 적재한다(`customer_id`·`campaign_id` N
 **POST /ai/reports/campaigns/{campaignId}** (생성·재생성, 요청 본문 없음) / **GET** (최근 요약) 응답 data
 
 ```json
-{ "reportId": 7, "campaignId": 42, "content": "가을 감사 쿠폰 발송 캠페인은 ... (5문장 이내 평문)", "model": "gemini-3.1-flash-lite",
+{ "reportId": 7, "campaignId": 42, "content": "가을 감사 쿠폰 발송 캠페인은 ... (5문장 이내 평문)", "model": "gemini-3.5-flash-lite",
   "input": { "campaignName": "가을 감사 쿠폰 발송", "kpi": { "attempted": 40, "sent": 38, "successRate": 0.95, "uniqueOpens": 14, "openRate": 0.3684,
     "uniqueClicks": 5, "clickRate": 0.1316, "couponUsed": 0, "conversionRate": 0.0 } },
   "createdAt": "2026-10-01T14:00:00+09:00" }
